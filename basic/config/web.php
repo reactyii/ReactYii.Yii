@@ -35,12 +35,25 @@ $config = [
             // for the mailer to send real emails.
             'useFileTransport' => true,
         ],
+        // https://www.yiiframework.com/doc/guide/2.0/ru/runtime-logging
         'log' => [
-            'traceLevel' => YII_DEBUG ? 3 : 0,
+            'traceLevel' => YII_DEBUG ? 3 : 0, // в отладке каждое сообщение лога будет содержать до 3 уровней стека
             'targets' => [
-                [
+                'file' => [
                     'class' => 'yii\log\FileTarget',
-                    'levels' => ['error', 'warning'],
+                    'rotateByCopy' => true,
+                    'logFile' => '@runtime/logs/app.' . date('Y-m-d') . '.log',
+                    /*'prefix' => function ($message) {
+                        //$m = Target::formatMessage($message);
+                        $user = Yii::$app->has('user', true) ? Yii::$app->get('user') : null;
+                        $userID = $user ? $user->getId(false) : '-';
+                        return "[$userID]";
+                    },/* */
+                    'levels' => YII_DEBUG ? ['error', 'warning', 'info'] : ['error', 'warning'],
+                    'logVars' => [], // '_GET', '_POST', '_FILES', '_COOKIE', '_SESSION', '_SERVER'
+                    'except' => [
+                        'yii\web\Session::*',
+                    ],
                 ],
             ],
         ],
