@@ -19,9 +19,23 @@ $config = [
         ],
         'log' => [
             'targets' => [
-                [
+                'console' => [
                     'class' => 'yii\log\FileTarget',
+                    'rotateByCopy' => true,
+                    'logFile' => '@runtime/logs/' . date('Y-m-d') . '.console.log',
+                    'levels' => YII_DEBUG ? ['error', 'warning', 'info'] : ['error', 'warning'],
+                    'logVars' => [], // '_GET', '_POST', '_FILES', '_COOKIE', '_SESSION', '_SERVER'
+                    'except' => [
+                        'yii\db\*',
+                    ],
+                ],/* */
+                'errordb' => [
+                    'class' => 'yii\log\FileTarget',
+                    'rotateByCopy' => true,
+                    'logFile' => '@runtime/logs/' . date('Y-m-d') . '.errordb.log',
                     'levels' => ['error', 'warning'],
+                    'logVars' => [], // '_GET', '_POST', '_FILES', '_COOKIE', '_SESSION', '_SERVER'
+                    'categories' => ['yii\db\*'],
                 ],
             ],
         ],

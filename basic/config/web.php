@@ -39,10 +39,10 @@ $config = [
         'log' => [
             'traceLevel' => YII_DEBUG ? 3 : 0, // в отладке каждое сообщение лога будет содержать до 3 уровней стека
             'targets' => [
-                'file' => [
+                'app' => [
                     'class' => 'yii\log\FileTarget',
                     'rotateByCopy' => true,
-                    'logFile' => '@runtime/logs/app.' . date('Y-m-d') . '.log',
+                    'logFile' => '@runtime/logs/' . date('Y-m-d') . '.app.log',
                     /*'prefix' => function ($message) {
                         //$m = Target::formatMessage($message);
                         $user = Yii::$app->has('user', true) ? Yii::$app->get('user') : null;
@@ -54,6 +54,14 @@ $config = [
                     'except' => [
                         'yii\web\Session::*',
                     ],
+                ],
+                'errordb' => [
+                    'class' => 'yii\log\FileTarget',
+                    'rotateByCopy' => true,
+                    'logFile' => '@runtime/logs/' . date('Y-m-d') . '.errordb.log',
+                    'levels' => ['error', 'warning'],
+                    'logVars' => [], // '_GET', '_POST', '_FILES', '_COOKIE', '_SESSION', '_SERVER'
+                    'categories' => ['yii\db\*'],
                 ],
             ],
         ],
