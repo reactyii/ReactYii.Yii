@@ -288,6 +288,8 @@ class m200429_063615_content_tables extends Migration
             // где показывать контент - много ко многим!
             'menu_id' => $this->bigInteger()->comment('Главная страница где размещен контент. Пока не знаю нужно это или нет'),
             'section_id' => $this->bigInteger()->comment('Главный раздел в котором находится контент. Если NULL, то это раздел по умолчанию. Например, иногда бывает фишка, что сначала показываем новости раздела, а потом все остальные.'),
+            'is_all_section' => $this->tinyInteger()->notNull()->defaultValue(0)->comment('Для всех разделов'),
+            'is_all_menu' => $this->tinyInteger()->notNull()->defaultValue(0)->comment('Для всех страниц'),
 
             'name' => $this->string()->notNull(), // это значение исключительно для админа
 
@@ -304,6 +306,8 @@ class m200429_063615_content_tables extends Migration
         $this->_createIndex($_tn, ['language_id']);
         $this->_createIndex($_tn, ['section_id']);
         $this->_createIndex($_tn, ['menu_id']);
+        $this->_createIndex($_tn, ['is_all_section']);
+        $this->_createIndex($_tn, ['is_all_menu']);
 
         $this->_addForeignKey($_tn, 'site_id', 'site', 'id');  // при удалении сайта весь контент будет удален
         $this->_addForeignKey($_tn, 'parent_id', $_tn, 'id', 'SET NULL');  // при удалении родителя все его страницы будут премещены на верхний уровень
@@ -321,7 +325,7 @@ class m200429_063615_content_tables extends Migration
             'id' => $this->bigPrimaryKey(),
             'site_id' => $this->bigInteger()->notNull(),
             
-            'content_id' => $this->bigInteger()->notNull()->comment('Страница'),
+            'content_id' => $this->bigInteger()->notNull(),
             'section_id' => $this->bigInteger()->comment('Id раздела в котором находится контент. Если NULL, то это раздел по умолчанию'),
 
         ], $_tableOptions);
