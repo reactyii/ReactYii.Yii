@@ -299,6 +299,12 @@ class m200429_063615_content_tables extends Migration
 
             'search_words' => $this->text()->comment('Слова для поиска. При сохранении здесь формируем список слов для поиска.'),
             'template_keys_json' => $this->text()->comment('Список ключей для вставки в родительский шаблон или для вставки на страницу.'),
+
+            // списковая ед контента может переопределить сео страницы
+            'seo_title' => $this->text()->comment('SEO Title'),
+            'seo_description' => $this->text()->comment('SEO description meta tag'),
+            'seo_keywords' => $this->text()->comment('SEO keywords meta tag'),
+
         ], $_tableOptions);
 
         $this->_createIndex($_tn, ['site_id']);

@@ -21,8 +21,12 @@ use Yii;
  * @property int $is_all_menu Для всех страниц
  * @property string $name
  * @property string|null $template Ссылка на шаблон для отрисовки данной единицы. Например, для списков или составных блоков. Если NULL, то вставляем как текст.
+ * @property string|null $content Сам контент.
  * @property string|null $search_words Слова для поиска. При сохранении здесь формируем список слов для поиска.
  * @property string|null $template_keys_json Список ключей для вставки в родительский шаблон или для вставки на страницу.
+ * @property string|null $seo_title SEO Title
+ * @property string|null $seo_description SEO description meta tag
+ * @property string|null $seo_keywords SEO keywords meta tag
  *
  * @property Language $language
  * @property Menu $menu
@@ -52,8 +56,8 @@ class Content extends \yii\db\ActiveRecord
             [['site_id', 'created_at', 'name'], 'required'],
             [['site_id', 'priority', 'is_blocked', 'parent_id', 'language_id', 'menu_id', 'section_id', 'is_all_section', 'is_all_menu'], 'integer'],
             [['created_at', 'updated_at'], 'safe'],
-            [['template', 'search_words', 'template_keys_json'], 'string'],
-            [['name'], 'string', 'max' => 255],
+            [['content', 'search_words', 'template_keys_json', 'seo_title', 'seo_description', 'seo_keywords'], 'string'],
+            [['name', 'template'], 'string', 'max' => 255],
             [['language_id'], 'exist', 'skipOnError' => true, 'targetClass' => Language::className(), 'targetAttribute' => ['language_id' => 'id']],
             [['menu_id'], 'exist', 'skipOnError' => true, 'targetClass' => Menu::className(), 'targetAttribute' => ['menu_id' => 'id']],
             [['parent_id'], 'exist', 'skipOnError' => true, 'targetClass' => Content::className(), 'targetAttribute' => ['parent_id' => 'id']],
@@ -82,8 +86,12 @@ class Content extends \yii\db\ActiveRecord
             'is_all_menu' => 'Is All Menu',
             'name' => 'Name',
             'template' => 'Template',
+            'content' => 'Content',
             'search_words' => 'Search Words',
             'template_keys_json' => 'Template Keys Json',
+            'seo_title' => 'Seo Title',
+            'seo_description' => 'Seo Description',
+            'seo_keywords' => 'Seo Keywords',
         ];
     }
 
