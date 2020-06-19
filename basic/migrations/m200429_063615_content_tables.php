@@ -298,7 +298,7 @@ class m200429_063615_content_tables extends Migration
             'content' => $this->text()->comment('Сам контент.'),
 
             'search_words' => $this->text()->comment('Слова для поиска. При сохранении здесь формируем список слов для поиска.'),
-            //'template_keys_json' => $this->text()->comment('Список ключей для вставки в родительский шаблон или для вставки на страницу.'),
+            'template_keys_json' => $this->text()->comment('Список ключей для вставки в родительский шаблон или для вставки на страницу.'),
         ], $_tableOptions);
 
         $this->_createIndex($_tn, ['site_id']);
