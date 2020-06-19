@@ -27,6 +27,7 @@ $config = [
         ],
         'errorHandler' => [
             'errorAction' => 'site/error',
+            //'errorAction' => 'main/index',
         ],
         'mailer' => [
             'class' => 'yii\swiftmailer\Mailer',
@@ -66,15 +67,23 @@ $config = [
             ],
         ],
         'db' => $db,
-        /*
+
+        // https://www.yiiframework.com/doc/guide/2.0/ru/runtime-routing
         'urlManager' => [
             'enablePrettyUrl' => true,
             'showScriptName' => false,
+            'enableStrictParsing' => false,
+            'suffix' => '.html',
             'rules' => [
+                'site/<action>' => 'site/<action>', 
+                //'<url:[a-zA-Z0-9-_&%\\/]+>' => 'main/index', 
+                '<url:.*>' => 'main/index', 
             ],
-        ],
-        */
+        ],/* */
     ],
+    'defaultRoute' => 'main/index',
+    //'catchAll' => ['main/index'],
+
     'params' => $params,
 ];
 
@@ -93,6 +102,6 @@ if (YII_ENV_DEV) {
         // uncomment the following to add your IP if you are not connecting from localhost.
         //'allowedIPs' => ['127.0.0.1', '::1'],
     ];
-}
+}/* */
 
 return $config;
