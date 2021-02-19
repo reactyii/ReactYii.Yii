@@ -11,7 +11,7 @@ class m200429_063615_content_tables extends Migration
     private function _createIndex($table, $columns, $unique = false)
     {
         $_table = '{{%' . $table . '}}';
-        
+
         if (!is_array($columns)) $columns = [$columns];
 
         $this->createIndex('idx-' . $table . '-' . implode('-', $columns), $_table, $columns, $unique);
@@ -21,7 +21,7 @@ class m200429_063615_content_tables extends Migration
     {
         $_table = '{{%' . $table . '}}';
         $_refTable = '{{%' . $refTable . '}}';
-        
+
         if (!is_array($columns)) $columns = [$columns];
 
         $this->addForeignKey('fk-' . $table . '-' . implode('-', $columns),
@@ -65,7 +65,7 @@ class m200429_063615_content_tables extends Migration
 
             'template_layout' => $this->string()->defaultValue('default_layout')->comment('Шаблон для "макета" по умолчанию. Может быть определен как в шаблоне так и в таблице шаблонов. Каждый раздел и страница в свою очередь его может преопределить.'),
             'template_page' => $this->string()->defaultValue('default_template')->comment('Шаблон для всех страниц раздела по умолчанию. Может быть определен как в шаблоне так и в таблице шаблонов. Каждый раздел и страница в свою очередь его может преопределить.'),
-            
+
             'settings_json' => $this->text()->comment('Настройки сайта в формате json. Справочник "строка" => "строка"'),
             //'html_entities_json' => $this->text()->comment('Сущности сайта (типа текст в футере, режим работы в шапке, логотип слева, справа)'),
         ], $_tableOptions);
@@ -81,7 +81,7 @@ class m200429_063615_content_tables extends Migration
         ]);
         $site_id = $this->db->getLastInsertID();
         Yii::info("------> site_id=" . $site_id);
-        
+
         // --------------------------------------------------------------------------------------------
         $_tn = 'language';
         $tn = '{{%' . $_tn . '}}';
@@ -113,7 +113,7 @@ class m200429_063615_content_tables extends Migration
         $this->_createIndex($_tn, ['is_blocked']);
         $this->_createIndex($_tn, ['path']);
         $this->_createIndex($_tn, ['is_default']);
-        
+
         $this->_addForeignKey($_tn, 'site_id', 'site', 'id');  // при удалении сайта языки будут удалены!
 
         // --------------------------------------------------------------------------------------------
@@ -152,7 +152,7 @@ class m200429_063615_content_tables extends Migration
         $this->_createIndex($_tn, ['path']);
         $this->_createIndex($_tn, ['host']);
         $this->_createIndex($_tn, ['path', 'host'], true); // чтоб нельзя было создать 2 одинаковыx раздела
-        
+
         $this->_addForeignKey($_tn, 'site_id', 'site', 'id');  // при удалении сайта разделы будут удалены!
         $this->_addForeignKey($_tn, 'parent_id', $_tn, 'id', 'SET NULL');  // при удалении родителя все его страницы будут премещены на верхний уровень
 
@@ -183,7 +183,7 @@ class m200429_063615_content_tables extends Migration
             'section_id' => $this->bigInteger()->comment('Главный раздел в котором находится страница (для canonical). Если NULL, то это раздел по умолчанию. В некоторых шаблонах от раздела зависит дизайн страницы'),
             'is_all_section' => $this->tinyInteger()->notNull()->defaultValue(0)->comment('Размещение во всех разделах. Например такие страницы как "Контакты", "Правила" в футере. И также, например, "Новости"'),
             'is_current_section' => $this->tinyInteger()->notNull()->defaultValue(0)->comment('Размещение как в текущем разделе. Нужно для формирования ссылки. Например, в каждом разделе может быть страница "Новости" и "Фотки", но сам контент таких страниц зависит от раздела.'),
-            
+
             'name' => $this->string(1024)->notNull()->defaultValue('')->comment('H1 страницы. Может быть пустая строка.'),
             'menu_name' => $this->string(255)->notNull()->defaultValue('')->comment('Название страницы в меню. Здесь не может быть пустой строки.'),
 
@@ -193,7 +193,7 @@ class m200429_063615_content_tables extends Migration
 
             'search_words' => $this->text()->comment('Слова для поиска. При сохранении страницы здесь формируем список слов для поиска.'),
             'template_keys_json' => $this->text()->comment('Список ключей для вставки в шаблон (TOP_MENU,FOOTER_MENU,LEFT_MENU). Каждый пункт меню может располагаться в нескольких местах на странице (верхнее, нижнее и боковое меню).'),
-            
+
             'seo_title' => $this->text()->comment('SEO Title'),
             'seo_description' => $this->text()->comment('SEO description meta tag'),
             'seo_keywords' => $this->text()->comment('SEO keywords meta tag'),
@@ -221,7 +221,7 @@ class m200429_063615_content_tables extends Migration
         $this->createTable($tn, [
             'id' => $this->bigPrimaryKey(),
             'site_id' => $this->bigInteger()->notNull(),
-            
+
             'menu_id' => $this->bigInteger()->notNull()->comment('Страница'),
             'section_id' => $this->bigInteger()->comment('Id раздела в котором находится страница. Если NULL, то это раздел по умолчанию'),
 
@@ -230,7 +230,7 @@ class m200429_063615_content_tables extends Migration
         $this->_createIndex($_tn, ['site_id']);
         $this->_createIndex($_tn, ['menu_id']);
         $this->_createIndex($_tn, ['section_id']);
-        
+
         $this->_addForeignKey($_tn, 'site_id', 'site', 'id');  // при удалении сайта связь будет удалена!
         $this->_addForeignKey($_tn, 'menu_id', 'menu', 'id'); // при удалении страницы удаляем связь
         $this->_addForeignKey($_tn, 'section_id', 'section', 'id'); // при удалении раздела удаляем связь
@@ -263,7 +263,7 @@ class m200429_063615_content_tables extends Migration
         $this->_createIndex($_tn, ['site_id']);
         $this->_createIndex($_tn, ['priority']);
         $this->_createIndex($_tn, ['site_id', 'key'], true);
-        
+
         $this->_addForeignKey($_tn, 'site_id', 'site', 'id');  // при удалении сайта шаблоны будут удалены!
 
         // --------------------------------------------------------------------------------------------
@@ -281,7 +281,7 @@ class m200429_063615_content_tables extends Migration
 
             'parent_id' => $this->bigInteger()->comment('В каком родительском элементе показать'),
             'language_id' => $this->bigInteger()->comment('Для какого языка данная единица. Если NULL, то для всех языков'),
-            
+
             // даже для примитивов сделаем шаблоны, например в некоторых шаблонах текст надо вставлять в div, а число форматировать по разному.
             //'type' => $this->string(30)->notNull()->defaultValue('text')->comment('Тип единицы контента: list, text, string, block, image... Тип единицы однозначно определяет шаблон, но могут быть примитивы, например текст или число'),
 
@@ -332,7 +332,7 @@ class m200429_063615_content_tables extends Migration
         $this->createTable($tn, [
             'id' => $this->bigPrimaryKey(),
             'site_id' => $this->bigInteger()->notNull(),
-            
+
             'content_id' => $this->bigInteger()->notNull(),
             'section_id' => $this->bigInteger()->comment('Id раздела в котором находится контент. Если NULL, то это раздел по умолчанию'),
 
@@ -341,7 +341,7 @@ class m200429_063615_content_tables extends Migration
         $this->_createIndex($_tn, ['site_id']);
         $this->_createIndex($_tn, ['content_id']);
         $this->_createIndex($_tn, ['section_id']);
-        
+
         $this->_addForeignKey($_tn, 'site_id', 'site', 'id');  // при удалении сайта связь будет удалены!
         $this->_addForeignKey($_tn, 'content_id', 'content', 'id'); // при удалении единицы удаляем связь
         $this->_addForeignKey($_tn, 'section_id', 'section', 'id'); // при удалении раздела удаляем связь
@@ -354,7 +354,7 @@ class m200429_063615_content_tables extends Migration
         $this->createTable($tn, [
             'id' => $this->bigPrimaryKey(),
             'site_id' => $this->bigInteger()->notNull(),
-            
+
             'content_id' => $this->bigInteger()->notNull()->comment('Страница'),
             'menu_id' => $this->bigInteger()->notNull()->comment('Cтраница где показываем контент.'),
 
@@ -363,7 +363,7 @@ class m200429_063615_content_tables extends Migration
         $this->_createIndex($_tn, ['site_id']);
         $this->_createIndex($_tn, ['content_id']);
         $this->_createIndex($_tn, ['menu_id']);
-        
+
         $this->_addForeignKey($_tn, 'site_id', 'site', 'id');  // при удалении сайта связь будет удалены!
         $this->_addForeignKey($_tn, 'content_id', 'content', 'id'); // при удалении единицы удаляем связь
         $this->_addForeignKey($_tn, 'menu_id', 'menu', 'id'); // при удалении страницы удаляем связь
@@ -382,7 +382,7 @@ class m200429_063615_content_tables extends Migration
      */
     public function safeDown()
     {
-        
+
         $this->dropTable('{{%content_on_section}}');
         $this->dropTable('{{%content_on_menu}}');
 
