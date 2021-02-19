@@ -64,7 +64,7 @@ class MainController extends Controller
     {
         $result = [];
         $parts = explode('/', $path);
-        
+
         // 2. начнем с резолва языка, еслит он есть, то он занимает первую часть пути
         //$result['lang'] = $this->
 
