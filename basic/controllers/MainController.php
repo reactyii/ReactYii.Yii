@@ -34,16 +34,58 @@ class MainController extends Controller
     {
         $request = Yii::$app->request;
         $path = $request->pathInfo;
-        Yii::info("start: " . $path, __METHOD__);
+        Yii::info("start " . $request->method . ': ' . $path, __METHOD__);
 
-        if ($request->isAjax) { /* текущий запрос является AJAX запросом */ }
+        if (!$this->checkCORS($request))
+        {
+            return; // ответ уже выслан
+        }
 
-        $response = Yii::$app->response;
-        $response->format = \yii\web\Response::FORMAT_JSON;
-        $response->data = ['message' => 'hello world', 'path' => $path];
+        if ($request->isAjax)
+        {
+            $response = Yii::$app->response;
+            $response->format = \yii\web\Response::FORMAT_JSON;
+            $response->data = ['message' => 'hello world', 'path' => $path];
+            return;
+        }
 
-        //return $this->render('index');
+        return $this->render('index');
     }
+
+    /**
+     * check CORS and set Access-Control-Allow-Origin header
+     *
+     * @return boolean
+     */
+    private function checkCORS(&$request)
+    {
+        $headers = $request->headers;
+        $origin = $headers->get('Origin');
+        if (!$origin) return true; // нет заголовка для проверки. ничего делать не нужно
+
+        //Yii::info('host: ' . $request->userHost . '; ip: ' . $request->userIP, __METHOD__);
+        Yii::info('Origin: ' . $origin, __METHOD__); // http://localhost:3000
+        list($proto, $hostport) = explode('//', $origin, 2);
+        list($host, $port) = explode(':', $hostport, 2); 
+        $allwedOrigins = ['localhost']; // разрешенные хосты для аякс реквестов
+
+        if (!in_array($host, $allwedOrigins)) // запрос не с нашего сайта. выдадим ответ not allowed
+        { 
+            throw new \yii\web\MethodNotAllowedHttpException;
+            return false;
+        }
+
+        // https://developer.mozilla.org/ru/docs/Web/HTTP/CORS
+        // настроим корс для работы на локале (там у нас реакт обычно запущен на другом домене)
+        $headers = Yii::$app->response->headers;
+        $headers->set('Access-Control-Allow-Origin', $origin);
+        //$headers->set('Access-Control-Allow-Credentials', 'true');
+        $headers->set('Access-Control-Allow-Headers', 'X-Requested-With');
+        $headers->set('Access-Control-Allow-Methods', 'OPTIONS,GET,POST');
+
+        return true;
+    }
+
 
     /**
      * Определяем язык, раздел и страницу которую запросил юзер.
