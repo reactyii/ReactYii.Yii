@@ -38,7 +38,7 @@ $config = [
         ],
         // https://www.yiiframework.com/doc/guide/2.0/ru/runtime-logging
         'log' => [
-            'traceLevel' => YII_DEBUG ? 3 : 0, // в отладке каждое сообщение лога будет содержать до 3 уровней стека
+            'traceLevel' => YII_DEBUG ? 0 : 0, // в отладке каждое сообщение лога будет содержать до 3 уровней стека
             'targets' => [
                 'app' => [
                     'class' => 'yii\log\FileTarget',

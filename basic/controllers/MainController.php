@@ -34,20 +34,26 @@ class MainController extends Controller
     {
         $request = Yii::$app->request;
         $path = $request->pathInfo;
-        Yii::info("start " . $request->method . ': ' . $path, __METHOD__);
+        Yii::info("--------------------start " . $request->method . ': ' . $path, __METHOD__);
 
         if (!$this->checkCORS($request))
         {
-            return; // ответ уже выслан
+            return; // ответ уже выслан или ничего не надо посылать
         }
+
+        Yii::info('continue afterCORS', __METHOD__);
 
         if ($request->isAjax)
         {
+            Yii::info('prepare json data for page', __METHOD__);
+
             $response = Yii::$app->response;
             $response->format = \yii\web\Response::FORMAT_JSON;
             $response->data = ['message' => 'hello world', 'path' => $path];
             return;
         }
+
+        Yii::info('render only react container', __METHOD__);
 
         return $this->render('index');
     }
@@ -82,6 +88,8 @@ class MainController extends Controller
         //$headers->set('Access-Control-Allow-Credentials', 'true');
         $headers->set('Access-Control-Allow-Headers', 'X-Requested-With');
         $headers->set('Access-Control-Allow-Methods', 'OPTIONS,GET,POST');
+
+        if ($request->method === 'OPTIONS') return false; // в этом случае нам надо будет завершить выполнение скрипта. 
 
         return true;
     }
