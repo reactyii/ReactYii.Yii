@@ -12,6 +12,8 @@ $config = [
     'aliases' => [
         '@bower' => '@vendor/bower-asset',
         '@npm'   => '@vendor/npm-asset',
+        // в этой папке сборка шаблона 
+        '@react' => dirname(__DIR__) . '/../../ReactYii.React/build/static',
     ],
     'components' => [
         'request' => [

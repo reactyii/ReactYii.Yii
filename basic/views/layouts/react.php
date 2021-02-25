@@ -1,8 +1,12 @@
 <?php
 use yii\helpers\Html;
+use app\assets\ReactAsset;
 
 /* @var $this yii\web\View */
 /* @var $content string */
+
+ReactAsset::register($this);
+
 ?>
 <?php $this->beginPage() ?>
 <!DOCTYPE html>
@@ -15,8 +19,8 @@ use yii\helpers\Html;
 </head>
 <body>
 <?php $this->beginBody() ?>
-    <header>Моя<?= $content ?>
-    <footer>Моя2014</footer>
+    <div id="root"><?= $content ?></div>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
 <?php $this->endBody() ?>
 </body>
 </html>
