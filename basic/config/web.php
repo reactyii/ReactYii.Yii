@@ -77,7 +77,7 @@ $config = [
             'rules' => [
                 'site/<action>' => 'site/<action>', 
                 //'<url:[a-zA-Z0-9-_&%\\/]+>' => 'main/index', 
-                '<url:.*>' => 'main/index', 
+                '<url:.*>' => 'react/index', 
             ],
         ],/* */
     ],

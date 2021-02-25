@@ -10,7 +10,7 @@ use yii\filters\VerbFilter;
 use app\models\LoginForm;
 use app\models\ContactForm;
 
-class MainController extends Controller
+class ReactController extends Controller
 {
 
     /**
