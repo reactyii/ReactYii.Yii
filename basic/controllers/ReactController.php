@@ -12,6 +12,7 @@ use app\models\ContactForm;
 
 class ReactController extends Controller
 {
+    public $layout = 'react';
 
     /**
      * {@inheritdoc}
