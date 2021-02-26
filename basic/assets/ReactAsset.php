@@ -29,7 +29,6 @@ class ReactAsset extends AssetBundle
     public function init()
     {
         parent::init();
-        // $this->js[] = 'i18n/' . Yii::$app->language . '.js'; // dynamic file added
 
         Yii::info("--> " . ': ' . $this->sourcePath, __METHOD__);
         $jss = FileHelper::findFiles($this->sourcePath . '/js', [
@@ -60,12 +59,12 @@ class ReactAsset extends AssetBundle
                     break;
 
                 default:
-                    Yii::info('--> $vendor founded ' . $n, __METHOD__);
+                    // Yii::info('--> $vendor founded ' . $n, __METHOD__);
                     $js_vendor[] = 'js/' . $n;
             }
         });
 
-        Yii::info('--> $js_vendor=' . var_export($js_vendor, true), __METHOD__);
+        // Yii::info('--> $js_vendor=' . var_export($js_vendor, true), __METHOD__);
 
         if ($js_runtimemain != null) {
             $this->js[] = $js_runtimemain; // надо бы инлайом его подключить
@@ -78,6 +77,12 @@ class ReactAsset extends AssetBundle
             $this->js[] = $js_main;
         }
 
-        Yii::info('--> $js=' . var_export($this->js, true), __METHOD__);
+        // подключение стилей
+        $this->css = array_map(function ($item) {
+            $n = basename($item);
+            return 'css/' . $n;
+        }, $csss);
+
+        // Yii::info('--> $js=' . var_export($this->js, true), __METHOD__);
     } /* */
 }
