@@ -3,6 +3,7 @@
 namespace app\models;
 
 use Yii;
+use yii\caching\TagDependency;
 
 /**
  * This is the model class for table "{{%language}}".
@@ -23,6 +24,25 @@ use Yii;
  */
 class Language extends \yii\db\ActiveRecord
 {
+    public static function getAll($siteid)
+    {
+        $key = implode('-', [$siteid, __CLASS__, __FUNCTION__]);
+        Yii::info("getAll. key=" . $key, __METHOD__);
+
+
+        return Yii::$app->cache->getOrSet($key, function () use ($key, $siteid) {
+            Yii::info("getAll. get from DB key=" . $key, __METHOD__);
+
+            return self::find()
+                ->where(['site_id' => $siteid])
+                ->orderBy('id')
+                ->asArray() // будем хранить в кеше данные в массивах
+                ->all();
+        }, null, new TagDependency(['tags' => ['site-' . $siteid, 'languages-' . $siteid,]]));
+    }
+
+    // -------------------------------------------- auto generated -------------------------
+
     /**
      * {@inheritdoc}
      */

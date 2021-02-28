@@ -9,6 +9,7 @@ use yii\web\Response;
 use yii\filters\VerbFilter;
 use app\models\LoginForm;
 use app\models\ContactForm;
+use app\models\Language;
 
 class MainController extends Controller
 {
@@ -36,6 +37,8 @@ class MainController extends Controller
         $path = $request->pathInfo;
         Yii::info("start: " . $path, __METHOD__);
 
+        list($site, $lang, $section, $page) = $this->parsePath(null, $path);
+
         if ($request->isAjax) { /* текущий запрос является AJAX запросом */ }
 
         $response = Yii::$app->response;
@@ -62,12 +65,21 @@ class MainController extends Controller
      */
     private function parsePath($host, $path)
     {
-        $result = [];
+        $site = null;
+        $lang = null;
+        $section = null;
+        $page = null;
+
         $parts = explode('/', $path);
         
-        // 2. начнем с резолва языка, еслит он есть, то он занимает первую часть пути
-        //$result['lang'] = $this->
+        // резолв сайта (пока будем считать что у нас один сайт по умолчанию)
+        $siteid = 1;
 
+        // 2. начнем с резолва языка, если он есть, то он занимает первую часть пути
+        //$result['lang'] = $this->
+        Language::getAll($siteid);
+
+        return [$site, $lang, $section, $page];
     }
 
 }
