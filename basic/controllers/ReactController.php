@@ -48,6 +48,11 @@ class ReactController extends Controller
         {
             sleep(3);// отладка
             Yii::info('prepare json data for page', __METHOD__);
+            if ($path == '404.html')
+            {
+                throw new \yii\web\NotFoundHttpException;
+                return false;
+            }
 
             $response = Yii::$app->response;
             $response->format = \yii\web\Response::FORMAT_JSON;
