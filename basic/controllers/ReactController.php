@@ -46,6 +46,7 @@ class ReactController extends Controller
 
         if ($request->isAjax)
         {
+            sleep(3);// отладка
             Yii::info('prepare json data for page', __METHOD__);
 
             $response = Yii::$app->response;
@@ -87,7 +88,7 @@ class ReactController extends Controller
         $headers = Yii::$app->response->headers;
         $headers->set('Access-Control-Allow-Origin', $origin);
         //$headers->set('Access-Control-Allow-Credentials', 'true');
-        $headers->set('Access-Control-Allow-Headers', 'X-Requested-With');
+        $headers->set('Access-Control-Allow-Headers', 'content-type,X-Requested-With');
         $headers->set('Access-Control-Allow-Methods', 'OPTIONS,GET,POST');
 
         if ($request->method === 'OPTIONS') return false; // в этом случае нам надо будет завершить выполнение скрипта. 
