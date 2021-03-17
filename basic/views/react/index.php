@@ -2,12 +2,7 @@
 
 /* @var $this yii\web\View */
 
-$this->title = 'My Yii Application';
+//$this->title = 'My Yii Application';
+$this->params['header'] = $header;
 ?>
-<div class="site-index">
-
-    <div class="jumbotron">
-        <h1>hello!</h1>
-
-    </div>
-</div>
+<?=$content?>

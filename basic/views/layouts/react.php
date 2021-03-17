@@ -8,20 +8,29 @@ use app\assets\ReactAsset;
 ReactAsset::register($this);
 
 ?>
-<?php $this->beginPage() ?>
+<?php
+$this->beginPage();
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8"/>
-    <?= Html::csrfMetaTags() ?>
-    <title><?= Html::encode($this->title) ?></title>
-    <?php $this->head() ?>
+    <?=Html::csrfMetaTags()?>
+    <?=$this->params['header']?>
+    <?php
+    $this->head();
+    ?>
 </head>
 <body>
-<?php $this->beginBody() ?>
-    <div id="root"><?= $content ?></div>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
-<?php $this->endBody() ?>
+<?php
+$this->beginBody();
+?>
+    <?=$content?>
+<?php
+$this->endBody();
+?>
 </body>
 </html>
-<?php $this->endPage() ?>
+<?php
+$this->endPage();
+?>

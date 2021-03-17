@@ -1,5 +1,4 @@
 <?php
-
 $params = require __DIR__ . '/params.php';
 $db = require __DIR__ . '/db.php';
 
@@ -8,35 +7,38 @@ $settings = require __DIR__ . '/settings.php';
 $config = [
     'id' => 'basic',
     'basePath' => dirname(__DIR__),
-    'bootstrap' => ['log'],
+    'bootstrap' => [
+        'log'
+    ],
     'aliases' => [
         '@bower' => '@vendor/bower-asset',
-        '@npm'   => '@vendor/npm-asset',
-        // в этой папке сборка шаблона 
-        '@react' => dirname(__DIR__) . '/../../ReactYii.React/build/static',
+        '@npm' => '@vendor/npm-asset',
+        // в этой папке сборка шаблона
+        '@react' => $settings['path_to_template'] . '/build/static',
+        '@reactSSR' => $settings['path_to_template'] . '/ssr'
     ],
     'components' => [
         'request' => [
             // !!! insert a secret key in the following (if it is empty) - this is required by cookie validation
-            'cookieValidationKey' => $settings['cookieValidationKey'],
+            'cookieValidationKey' => $settings['cookieValidationKey']
         ],
         'cache' => [
-            'class' => 'yii\caching\FileCache',
+            'class' => 'yii\caching\FileCache'
         ],
         'user' => [
             'identityClass' => 'app\models\User',
-            'enableAutoLogin' => true,
+            'enableAutoLogin' => true
         ],
         'errorHandler' => [
-            'errorAction' => 'site/error',
-            //'errorAction' => 'main/index',
+            'errorAction' => 'site/error'
+            // 'errorAction' => 'main/index',
         ],
         'mailer' => [
             'class' => 'yii\swiftmailer\Mailer',
             // send all mails to a file by default. You have to set
             // 'useFileTransport' to false and configure a transport
             // for the mailer to send real emails.
-            'useFileTransport' => true,
+            'useFileTransport' => true
         ],
         // https://www.yiiframework.com/doc/guide/2.0/ru/runtime-logging
         'log' => [
@@ -52,21 +54,33 @@ $config = [
                         $userID = $user ? $user->getId(false) : '-';
                         return "[$userID]";
                     },/* */
-                    'levels' => YII_DEBUG ? ['error', 'warning', 'info'] : ['error', 'warning'],
+                    'levels' => YII_DEBUG ? [
+                        'error',
+                        'warning',
+                        'info'
+                    ] : [
+                        'error',
+                        'warning'
+                    ],
                     'logVars' => [], // '_GET', '_POST', '_FILES', '_COOKIE', '_SESSION', '_SERVER'
                     'except' => [
-                        'yii\web\Session::*',
-                    ],
+                        'yii\web\Session::*'
+                    ]
                 ],
                 'errordb' => [
                     'class' => 'yii\log\FileTarget',
                     'rotateByCopy' => true,
                     'logFile' => '@runtime/logs/' . date('Y-m-d') . '.errordb.log',
-                    'levels' => ['error', 'warning'],
+                    'levels' => [
+                        'error',
+                        'warning'
+                    ],
                     'logVars' => [], // '_GET', '_POST', '_FILES', '_COOKIE', '_SESSION', '_SERVER'
-                    'categories' => ['yii\db\*'],
-                ],
-            ],
+                    'categories' => [
+                        'yii\db\*'
+                    ]
+                ]
+            ]
         ],
         'db' => $db,
 
@@ -77,33 +91,33 @@ $config = [
             'enableStrictParsing' => false,
             'suffix' => '.html',
             'rules' => [
-                'site/<action>' => 'site/<action>', 
-                //'<url:[a-zA-Z0-9-_&%\\/]+>' => 'main/index', 
-                '<url:.*>' => 'react/index', 
-            ],
-        ],/* */
+                'site/<action>' => 'site/<action>',
+                // '<url:[a-zA-Z0-9-_&%\\/]+>' => 'main/index',
+                '<url:.*>' => 'react/index'
+            ]
+        ] /* */
     ],
     'defaultRoute' => 'main/index',
-    //'catchAll' => ['main/index'],
+    // 'catchAll' => ['main/index'],
 
-    'params' => $params,
+    'params' => $params
 ];
 
 if (YII_ENV_DEV) {
     // configuration adjustments for 'dev' environment
     $config['bootstrap'][] = 'debug';
     $config['modules']['debug'] = [
-        'class' => 'yii\debug\Module',
+        'class' => 'yii\debug\Module'
         // uncomment the following to add your IP if you are not connecting from localhost.
-        //'allowedIPs' => ['127.0.0.1', '::1'],
+        // 'allowedIPs' => ['127.0.0.1', '::1'],
     ];
 
     $config['bootstrap'][] = 'gii';
     $config['modules']['gii'] = [
-        'class' => 'yii\gii\Module',
+        'class' => 'yii\gii\Module'
         // uncomment the following to add your IP if you are not connecting from localhost.
-        //'allowedIPs' => ['127.0.0.1', '::1'],
+        // 'allowedIPs' => ['127.0.0.1', '::1'],
     ];
-}/* */
+} /* */
 
 return $config;

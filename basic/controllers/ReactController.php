@@ -6,9 +6,9 @@ use Yii;
 use yii\filters\AccessControl;
 use yii\web\Controller;
 use yii\web\Response;
-use yii\filters\VerbFilter;
-use app\models\LoginForm;
-use app\models\ContactForm;
+//use yii\filters\VerbFilter;
+//use app\models\LoginForm;
+//use app\models\ContactForm;
 
 class ReactController extends Controller
 {
@@ -56,13 +56,83 @@ class ReactController extends Controller
 
             $response = Yii::$app->response;
             $response->format = \yii\web\Response::FORMAT_JSON;
-            $response->data = ['message' => 'hello world', 'path' => $path];
+            $seo = ['title' => 'hello world for /' . $path];
+            $response->data = ['seo' => $seo, 'path' => '/' . $path];
             return;
         }
 
         Yii::info('render only react container', __METHOD__);
 
-        return $this->render('index');
+        // SSR
+        $data = $this->setSSR($path);
+
+        switch ($data['status']) {
+            case 404:
+                throw new \yii\web\NotFoundHttpException;
+            case 301:
+            case 302:
+                // редирект (пока кинем ошибку - не реализовано)
+                throw new yii\web\ServerErrorHttpException;
+                // $this->redirect('http://example.com/new', 301);
+            break;
+            case 200:
+                return $this->render('index', $data);
+            default: 
+                // https://www.yiiframework.com/doc/guide/2.0/ru/runtime-responses
+                throw new yii\web\ServerErrorHttpException;
+        }
+    }
+
+    /**
+     * Устанавливаем данные от серверного рендера (если они есть и если нужно)
+     *
+     * @return array
+     */
+    private function setSSR($path)
+    {
+        $result = ['status' => 200, 'content' => '', 'header' =>''];
+
+        if (false) // если  юзер авторизован, то сразу выходим и возвращаем код 200
+        {
+            return $result;
+        }
+
+        // check cache!
+        // ...
+
+        $ssr_path = rtrim(Yii::getAlias('@reactSSR', '/\\'));
+
+        $filename = $path;
+        switch($path)
+        {
+            case '':
+            case 'index.html':
+                $filename = 'index.html';
+                break;
+        }
+
+        $page = @implode('', @file($ssr_path . '/' . $filename));
+        if (!$page) // нет страницы вернем 404
+        {
+            $result['status'] = 404;
+            return $result;    
+        }
+        list ($header, $body) = explode('</head><body>', $page, 2);
+        list ($tmp, $header) = explode('<head>', $header);
+        list ($body, $tmp) = explode('</body>', $body);
+
+        // уберем из хеадера линки на стили
+        $header = preg_replace(['/<link [^>]* rel="stylesheet">/'], [''], $header);
+        $header = str_replace(['<link href="/manifest.json" rel="manifest">', '<meta charset="utf-8">'], ['', ''], $header);
+
+        // из боди линки на скрипты
+        $body = preg_replace(['/<script>.*?<\\/script>/', '/<script src=.*?<\\/script>/'], ['', ''], $body);
+
+        //Yii::info('SSR [' . $ssr_path . '/' . $path . '] page= ' . var_export($page, true), __METHOD__); // http://localhost:3000
+        $result['content'] = $body;
+        $result['header'] = $header;
+
+        return $result;
     }
 
     /**
