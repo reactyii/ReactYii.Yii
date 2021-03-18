@@ -9,6 +9,7 @@ use yii\web\Response;
 //use yii\filters\VerbFilter;
 //use app\models\LoginForm;
 //use app\models\ContactForm;
+use app\models\Language;
 
 class ReactController extends Controller
 {
@@ -43,6 +44,8 @@ class ReactController extends Controller
         }
 
         Yii::info('continue afterCORS', __METHOD__);
+
+        list($site, $lang, $section, $page) = $this->parsePath(null, $path);
 
         if ($request->isAjax)
         {
@@ -189,12 +192,22 @@ class ReactController extends Controller
      */
     private function parsePath($host, $path)
     {
-        $result = [];
+        $site = null;
+        $lang = null;
+        $section = null;
+        $page = null;
+
         $parts = explode('/', $path);
+        
+        // резолв сайта (пока будем считать что у нас один сайт по умолчанию)
+        $siteid = 1;
 
-        // 2. начнем с резолва языка, еслит он есть, то он занимает первую часть пути
+        // 2. начнем с резолва языка, если он есть, то он занимает первую часть пути
         //$result['lang'] = $this->
+        Language::getAll($siteid);
 
+        return [$site, $lang, $section, $page];
     }
+
 
 }

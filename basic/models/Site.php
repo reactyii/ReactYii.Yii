@@ -29,6 +29,23 @@ use Yii;
  */
 class Site extends \yii\db\ActiveRecord
 {
+    public static function getAll()
+    {
+        $key = implode('-', [__CLASS__, __FUNCTION__]);
+        Yii::info("getAll. key=" . $key, __METHOD__);
+
+        return Yii::$app->cache->getOrSet($key, function () use ($key) {
+            Yii::info("getAll. get from DB key=" . $key, __METHOD__);
+
+            return self::find()
+                ->where(['is_blocked' => 0])
+                ->asArray() // будем хранить в кеше данные в массивах
+                ->all();
+        }, null, new TagDependency(['tags' => ['site-' . $siteid, 'languages-' . $siteid,]]));
+    }
+
+    // -------------------------------------------- auto generated -------------------------
+
     /**
      * {@inheritdoc}
      */
