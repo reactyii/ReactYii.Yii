@@ -1,5 +1,4 @@
 <?php
-
 namespace app\models;
 
 use Yii;
@@ -24,26 +23,37 @@ use yii\caching\TagDependency;
  */
 class Language extends \yii\db\ActiveRecord
 {
-    public static function getAll($siteid)
+
+    public static function getAll(&$site)
     {
-        $key = implode('-', [$siteid, __CLASS__, __FUNCTION__]);
+        $key = implode('-', [
+            $site['id'],
+            __CLASS__,
+            __FUNCTION__
+        ]);
         Yii::info("getAll. key=" . $key, __METHOD__);
 
+        return Yii::$app->cache->getOrSet($key, function () use ($key, $site) {
+            Yii::info("getAll. get from DB for key=" . $key, __METHOD__);
 
-        return Yii::$app->cache->getOrSet($key, function () use ($key, $siteid) {
-            Yii::info("getAll. get from DB key=" . $key, __METHOD__);
-
-            return self::find()
-                ->where(['site_id' => $siteid])
+            return self::find()->where([
+                'site_id' => $site['id']
+            ])
                 ->orderBy('id')
-                ->asArray() // будем хранить в кеше данные в массивах
+                ->asArray()
                 ->all();
-        }, null, new TagDependency(['tags' => ['site-' . $siteid, 'languages-' . $siteid,]]));
+        }, null, new TagDependency([
+            'tags' => [
+                'site-' . $site['id'],
+                'languages-' . $site['id']
+            ]
+        ]));
     }
 
     // -------------------------------------------- auto generated -------------------------
 
     /**
+     *
      * {@inheritdoc}
      */
     public static function tableName()
@@ -52,21 +62,67 @@ class Language extends \yii\db\ActiveRecord
     }
 
     /**
+     *
      * {@inheritdoc}
      */
     public function rules()
     {
         return [
-            [['site_id', 'created_at', 'name', 'path'], 'required'],
-            [['site_id', 'priority', 'is_blocked', 'is_default'], 'integer'],
-            [['created_at', 'updated_at'], 'safe'],
-            [['messages_json'], 'string'],
-            [['name', 'path'], 'string', 'max' => 255],
-            [['site_id'], 'exist', 'skipOnError' => true, 'targetClass' => Site::className(), 'targetAttribute' => ['site_id' => 'id']],
+            [
+                [
+                    'site_id',
+                    'created_at',
+                    'name',
+                    'path'
+                ],
+                'required'
+            ],
+            [
+                [
+                    'site_id',
+                    'priority',
+                    'is_blocked',
+                    'is_default'
+                ],
+                'integer'
+            ],
+            [
+                [
+                    'created_at',
+                    'updated_at'
+                ],
+                'safe'
+            ],
+            [
+                [
+                    'messages_json'
+                ],
+                'string'
+            ],
+            [
+                [
+                    'name',
+                    'path'
+                ],
+                'string',
+                'max' => 255
+            ],
+            [
+                [
+                    'site_id'
+                ],
+                'exist',
+                'skipOnError' => true,
+                'targetClass' => Site::className(),
+                'targetAttribute' => [
+                    'site_id' => 'id'
+                ]
+            ]
         ];
     }
 
     /**
+     *
      * {@inheritdoc}
      */
     public function attributeLabels()
@@ -81,7 +137,7 @@ class Language extends \yii\db\ActiveRecord
             'name' => 'Name',
             'path' => 'Path',
             'is_default' => 'Is Default',
-            'messages_json' => 'Messages Json',
+            'messages_json' => 'Messages Json'
         ];
     }
 
@@ -92,7 +148,9 @@ class Language extends \yii\db\ActiveRecord
      */
     public function getContents()
     {
-        return $this->hasMany(Content::className(), ['language_id' => 'id']);
+        return $this->hasMany(Content::className(), [
+            'language_id' => 'id'
+        ]);
     }
 
     /**
@@ -102,6 +160,8 @@ class Language extends \yii\db\ActiveRecord
      */
     public function getSite()
     {
-        return $this->hasOne(Site::className(), ['id' => 'site_id']);
+        return $this->hasOne(Site::className(), [
+            'id' => 'site_id'
+        ]);
     }
 }
