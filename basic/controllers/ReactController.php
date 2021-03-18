@@ -9,6 +9,7 @@ use yii\web\Response;
 // use app\models\LoginForm;
 // use app\models\ContactForm;
 use app\models\Language;
+use app\models\Site;
 use yii\caching\TagDependency;
 
 class ReactController extends Controller
@@ -64,10 +65,20 @@ class ReactController extends Controller
             $seo = [
                 'title' => 'hello world for /' . $path
             ];
-            $response->data = [
+            $response_data = [
                 'seo' => $seo,
                 'path' => '/' . $path
             ];
+            $session = [];
+            $siteLM = $request->get('__siteLM');
+            Yii::info('__siteLM=' . $siteLM . ' site[lastModified]=' . $site['lastModified'], __METHOD__);
+            if (! $siteLM || $siteLM < $site['lastModified']) {
+                $session['site'] = $site;
+            }
+            if ($session)
+                $response_data['session'] = $session;
+
+            $response->data = $response_data;
             return;
         }
 
@@ -244,13 +255,23 @@ class ReactController extends Controller
 
         $parts = explode('/', $path);
 
-        // резолв сайта (пока будем считать что у нас один сайт по умолчанию)
-        $siteid = 1;
-        $site['id'] = $siteid;
+        // резолв сайта
+        $site = Site::getSite($host);
 
         // 2. начнем с резолва языка, если он есть, то он занимает первую часть пути
-        // $result['lang'] = $this->
-        Language::getAll($site);
+        if (sizeof($parts) > 0) { // первая часть пути вполне может быть языком
+            foreach ($site['langs'] as $l) {
+                if ($l['path'] === $parts[0]) { // так и есть
+                    $lang = $l;
+                    array_shift($parts);
+                    break;
+                }
+            }
+        }
+        // язык по умолчанию не зависимо от того что еcть в path
+        if (! $lang && sizeof($site['langs']) > 0) { // языка в пути нет и языков больше чем 1, но мы выберем язык по умолчанию
+            $lang = $site['langs'][0]; // язык по умолчанию мы ставим на первое место при выборе из БД
+        }
 
         return [
             $site,
