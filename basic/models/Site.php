@@ -30,6 +30,43 @@ use Yii;
 class Site extends \yii\db\ActiveRecord
 {
 
+    public static function getSite($host)
+    {
+        $key = implode('-', [
+            __CLASS__,
+            __FUNCTION__
+        ]);
+
+        return Yii::$app->cache->getOrSet($key, function () use ($key, $host) {
+            Yii::info("get. get from DB key=" . $key, __METHOD__);
+
+            $sites = self::getAll();
+            if (! $sites)
+                throw new \ErrorException('Sites not founded');
+            $site = $sites[0];
+            if (sizeof($sites) > 1) {
+                foreach ($sites as $s) {
+                    if (str_ends_with($host, $s['main_host'])) {
+                        $site = $s;
+                        break;
+                    }
+                }
+            }
+            // догружаем меню разделя языки
+            // ...
+
+            $site['langs'] = Language::getAll($site);
+            $site['lastModified'] = time(); // сохраним время генерации данных (пока не будем использовать updated_at из таблицы)
+
+            return $site;
+        }, null, new TagDependency([
+            'tags' => [
+                'sites',
+                'site-' . $host
+            ]
+        ]));
+    }
+
     public static function getAll()
     {
         $key = implode('-', [

@@ -37,9 +37,13 @@ class Language extends \yii\db\ActiveRecord
             Yii::info("getAll. get from DB for key=" . $key, __METHOD__);
 
             return self::find()->where([
-                'site_id' => $site['id']
+                'site_id' => $site['id'],
+                'is_blocked' => 0
             ])
-                ->orderBy('id')
+                ->orderBy([
+                'is_default' => SORT_DESC, // '1' первым шоб затем нули
+                'id' => SORT_ASC
+            ])
                 ->asArray()
                 ->all();
         }, null, new TagDependency([
