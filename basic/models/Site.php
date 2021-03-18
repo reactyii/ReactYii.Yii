@@ -1,7 +1,7 @@
 <?php
-
 namespace app\models;
 
+use yii\caching\TagDependency;
 use Yii;
 
 /**
@@ -29,24 +29,34 @@ use Yii;
  */
 class Site extends \yii\db\ActiveRecord
 {
+
     public static function getAll()
     {
-        $key = implode('-', [__CLASS__, __FUNCTION__]);
+        $key = implode('-', [
+            __CLASS__,
+            __FUNCTION__
+        ]);
         Yii::info("getAll. key=" . $key, __METHOD__);
 
         return Yii::$app->cache->getOrSet($key, function () use ($key) {
             Yii::info("getAll. get from DB key=" . $key, __METHOD__);
 
-            return self::find()
-                ->where(['is_blocked' => 0])
-                ->asArray() // будем хранить в кеше данные в массивах
+            return self::find()->where([
+                'is_blocked' => 0
+            ])
+                ->asArray()
                 ->all();
-        }, null, new TagDependency(['tags' => ['site-' . $siteid, 'languages-' . $siteid,]]));
+        }, null, new TagDependency([
+            'tags' => [
+                'sites'
+            ]
+        ]));
     }
 
     // -------------------------------------------- auto generated -------------------------
 
     /**
+     *
      * {@inheritdoc}
      */
     public static function tableName()
@@ -55,20 +65,55 @@ class Site extends \yii\db\ActiveRecord
     }
 
     /**
+     *
      * {@inheritdoc}
      */
     public function rules()
     {
         return [
-            [['created_at', 'name', 'main_host'], 'required'],
-            [['created_at', 'updated_at'], 'safe'],
-            [['priority', 'is_blocked'], 'integer'],
-            [['settings_json'], 'string'],
-            [['name', 'main_host', 'template_layout', 'template_page'], 'string', 'max' => 255],
+            [
+                [
+                    'created_at',
+                    'name',
+                    'main_host'
+                ],
+                'required'
+            ],
+            [
+                [
+                    'created_at',
+                    'updated_at'
+                ],
+                'safe'
+            ],
+            [
+                [
+                    'priority',
+                    'is_blocked'
+                ],
+                'integer'
+            ],
+            [
+                [
+                    'settings_json'
+                ],
+                'string'
+            ],
+            [
+                [
+                    'name',
+                    'main_host',
+                    'template_layout',
+                    'template_page'
+                ],
+                'string',
+                'max' => 255
+            ]
         ];
     }
 
     /**
+     *
      * {@inheritdoc}
      */
     public function attributeLabels()
@@ -83,7 +128,7 @@ class Site extends \yii\db\ActiveRecord
             'main_host' => 'Main Host',
             'template_layout' => 'Template Layout',
             'template_page' => 'Template Page',
-            'settings_json' => 'Settings Json',
+            'settings_json' => 'Settings Json'
         ];
     }
 
@@ -94,7 +139,9 @@ class Site extends \yii\db\ActiveRecord
      */
     public function getContents()
     {
-        return $this->hasMany(Content::className(), ['site_id' => 'id']);
+        return $this->hasMany(Content::className(), [
+            'site_id' => 'id'
+        ]);
     }
 
     /**
@@ -104,7 +151,9 @@ class Site extends \yii\db\ActiveRecord
      */
     public function getContentOnMenus()
     {
-        return $this->hasMany(ContentOnMenu::className(), ['site_id' => 'id']);
+        return $this->hasMany(ContentOnMenu::className(), [
+            'site_id' => 'id'
+        ]);
     }
 
     /**
@@ -114,7 +163,9 @@ class Site extends \yii\db\ActiveRecord
      */
     public function getContentOnSections()
     {
-        return $this->hasMany(ContentOnSection::className(), ['site_id' => 'id']);
+        return $this->hasMany(ContentOnSection::className(), [
+            'site_id' => 'id'
+        ]);
     }
 
     /**
@@ -124,7 +175,9 @@ class Site extends \yii\db\ActiveRecord
      */
     public function getLanguages()
     {
-        return $this->hasMany(Language::className(), ['site_id' => 'id']);
+        return $this->hasMany(Language::className(), [
+            'site_id' => 'id'
+        ]);
     }
 
     /**
@@ -134,7 +187,9 @@ class Site extends \yii\db\ActiveRecord
      */
     public function getMenus()
     {
-        return $this->hasMany(Menu::className(), ['site_id' => 'id']);
+        return $this->hasMany(Menu::className(), [
+            'site_id' => 'id'
+        ]);
     }
 
     /**
@@ -144,7 +199,9 @@ class Site extends \yii\db\ActiveRecord
      */
     public function getMenuOnSections()
     {
-        return $this->hasMany(MenuOnSection::className(), ['site_id' => 'id']);
+        return $this->hasMany(MenuOnSection::className(), [
+            'site_id' => 'id'
+        ]);
     }
 
     /**
@@ -154,7 +211,9 @@ class Site extends \yii\db\ActiveRecord
      */
     public function getSections()
     {
-        return $this->hasMany(Section::className(), ['site_id' => 'id']);
+        return $this->hasMany(Section::className(), [
+            'site_id' => 'id'
+        ]);
     }
 
     /**
@@ -164,6 +223,8 @@ class Site extends \yii\db\ActiveRecord
      */
     public function getTemplates()
     {
-        return $this->hasMany(Template::className(), ['site_id' => 'id']);
+        return $this->hasMany(Template::className(), [
+            'site_id' => 'id'
+        ]);
     }
 }
