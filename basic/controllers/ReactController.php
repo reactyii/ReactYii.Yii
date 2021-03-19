@@ -71,9 +71,10 @@ class ReactController extends Controller
             ];
             $session = [];
             $siteLM = $request->get('__siteLM');
-            Yii::info('__siteLM=' . $siteLM . ' site[lastModified]=' . $site['lastModified'], __METHOD__);
+            Yii::info('__siteLM=[' . $siteLM . '] site[lastModified]=' . $site['lastModified'], __METHOD__);
             if (! $siteLM || $siteLM < $site['lastModified']) {
                 $session['site'] = $site;
+                // Yii::info('send session', __METHOD__);
             }
             if ($session)
                 $response_data['session'] = $session;
