@@ -1,8 +1,8 @@
 <?php
-
 namespace app\models;
 
 use Yii;
+use yii\caching\TagDependency;
 
 /**
  * This is the model class for table "{{%menu}}".
@@ -39,7 +39,41 @@ use Yii;
  */
 class Menu extends \yii\db\ActiveRecord
 {
+
+    public static function getAll(&$site)
+    {
+        $key = implode('-', [
+            $site['id'],
+            __CLASS__,
+            __FUNCTION__
+        ]);
+        Yii::info("getAll. key=" . $key, __METHOD__);
+
+        return Yii::$app->cache->getOrSet($key, function () use ($key, $site) {
+            Yii::info("getAll. get from DB key=" . $key, __METHOD__);
+
+            return self::find()->where([
+                'site_id' => $site['id'],
+                'is_blocked' => 0
+            ])
+                ->orderBy([
+                'priority' => SORT_ASC,
+                'id' => SORT_ASC
+            ])
+                ->asArray()
+                ->all();
+        }, null, new TagDependency([
+            'tags' => [
+                'site-' . $site['id'],
+                'menus-' . $site['id']
+            ]
+        ]));
+    }
+
+    // -------------------------------------------- auto generated -------------------------
+
     /**
+     *
      * {@inheritdoc}
      */
     public static function tableName()
@@ -48,25 +82,115 @@ class Menu extends \yii\db\ActiveRecord
     }
 
     /**
+     *
      * {@inheritdoc}
      */
     public function rules()
     {
         return [
-            [['site_id', 'created_at'], 'required'],
-            [['site_id', 'priority', 'is_blocked', 'parent_id', 'section_id', 'is_all_section', 'is_current_section', 'menu_id'], 'integer'],
-            [['created_at', 'updated_at'], 'safe'],
-            [['search_words', 'template_keys_json', 'seo_title', 'seo_description', 'seo_keywords', 'html_entities_json'], 'string'],
-            [['name', 'url'], 'string', 'max' => 1024],
-            [['menu_name', 'path'], 'string', 'max' => 255],
-            [['section_id', 'path'], 'unique', 'targetAttribute' => ['section_id', 'path']],
-            [['parent_id'], 'exist', 'skipOnError' => true, 'targetClass' => Menu::className(), 'targetAttribute' => ['parent_id' => 'id']],
-            [['section_id'], 'exist', 'skipOnError' => true, 'targetClass' => Section::className(), 'targetAttribute' => ['section_id' => 'id']],
-            [['site_id'], 'exist', 'skipOnError' => true, 'targetClass' => Site::className(), 'targetAttribute' => ['site_id' => 'id']],
+            [
+                [
+                    'site_id',
+                    'created_at'
+                ],
+                'required'
+            ],
+            [
+                [
+                    'site_id',
+                    'priority',
+                    'is_blocked',
+                    'parent_id',
+                    'section_id',
+                    'is_all_section',
+                    'is_current_section',
+                    'menu_id'
+                ],
+                'integer'
+            ],
+            [
+                [
+                    'created_at',
+                    'updated_at'
+                ],
+                'safe'
+            ],
+            [
+                [
+                    'search_words',
+                    'template_keys_json',
+                    'seo_title',
+                    'seo_description',
+                    'seo_keywords',
+                    'html_entities_json'
+                ],
+                'string'
+            ],
+            [
+                [
+                    'name',
+                    'url'
+                ],
+                'string',
+                'max' => 1024
+            ],
+            [
+                [
+                    'menu_name',
+                    'path'
+                ],
+                'string',
+                'max' => 255
+            ],
+            [
+                [
+                    'section_id',
+                    'path'
+                ],
+                'unique',
+                'targetAttribute' => [
+                    'section_id',
+                    'path'
+                ]
+            ],
+            [
+                [
+                    'parent_id'
+                ],
+                'exist',
+                'skipOnError' => true,
+                'targetClass' => Menu::className(),
+                'targetAttribute' => [
+                    'parent_id' => 'id'
+                ]
+            ],
+            [
+                [
+                    'section_id'
+                ],
+                'exist',
+                'skipOnError' => true,
+                'targetClass' => Section::className(),
+                'targetAttribute' => [
+                    'section_id' => 'id'
+                ]
+            ],
+            [
+                [
+                    'site_id'
+                ],
+                'exist',
+                'skipOnError' => true,
+                'targetClass' => Site::className(),
+                'targetAttribute' => [
+                    'site_id' => 'id'
+                ]
+            ]
         ];
     }
 
     /**
+     *
      * {@inheritdoc}
      */
     public function attributeLabels()
@@ -92,7 +216,7 @@ class Menu extends \yii\db\ActiveRecord
             'seo_title' => 'Seo Title',
             'seo_description' => 'Seo Description',
             'seo_keywords' => 'Seo Keywords',
-            'html_entities_json' => 'Html Entities Json',
+            'html_entities_json' => 'Html Entities Json'
         ];
     }
 
@@ -103,7 +227,9 @@ class Menu extends \yii\db\ActiveRecord
      */
     public function getContents()
     {
-        return $this->hasMany(Content::className(), ['menu_id' => 'id']);
+        return $this->hasMany(Content::className(), [
+            'menu_id' => 'id'
+        ]);
     }
 
     /**
@@ -113,7 +239,9 @@ class Menu extends \yii\db\ActiveRecord
      */
     public function getContentOnMenus()
     {
-        return $this->hasMany(ContentOnMenu::className(), ['menu_id' => 'id']);
+        return $this->hasMany(ContentOnMenu::className(), [
+            'menu_id' => 'id'
+        ]);
     }
 
     /**
@@ -123,7 +251,9 @@ class Menu extends \yii\db\ActiveRecord
      */
     public function getParent()
     {
-        return $this->hasOne(Menu::className(), ['id' => 'parent_id']);
+        return $this->hasOne(Menu::className(), [
+            'id' => 'parent_id'
+        ]);
     }
 
     /**
@@ -133,7 +263,9 @@ class Menu extends \yii\db\ActiveRecord
      */
     public function getMenus()
     {
-        return $this->hasMany(Menu::className(), ['parent_id' => 'id']);
+        return $this->hasMany(Menu::className(), [
+            'parent_id' => 'id'
+        ]);
     }
 
     /**
@@ -143,7 +275,9 @@ class Menu extends \yii\db\ActiveRecord
      */
     public function getSection()
     {
-        return $this->hasOne(Section::className(), ['id' => 'section_id']);
+        return $this->hasOne(Section::className(), [
+            'id' => 'section_id'
+        ]);
     }
 
     /**
@@ -153,7 +287,9 @@ class Menu extends \yii\db\ActiveRecord
      */
     public function getSite()
     {
-        return $this->hasOne(Site::className(), ['id' => 'site_id']);
+        return $this->hasOne(Site::className(), [
+            'id' => 'site_id'
+        ]);
     }
 
     /**
@@ -163,6 +299,8 @@ class Menu extends \yii\db\ActiveRecord
      */
     public function getMenuOnSections()
     {
-        return $this->hasMany(MenuOnSection::className(), ['menu_id' => 'id']);
+        return $this->hasMany(MenuOnSection::className(), [
+            'menu_id' => 'id'
+        ]);
     }
 }

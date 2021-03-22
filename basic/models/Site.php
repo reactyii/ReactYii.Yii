@@ -1,8 +1,8 @@
 <?php
 namespace app\models;
 
-use yii\caching\TagDependency;
 use Yii;
+use yii\caching\TagDependency;
 
 /**
  * This is the model class for table "{{%site}}".
