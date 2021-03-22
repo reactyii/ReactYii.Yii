@@ -27,7 +27,7 @@ use yii\caching\TagDependency;
  * @property Section[] $sections
  * @property Template[] $templates
  */
-class Site extends \yii\db\ActiveRecord
+class Site extends BaseModel
 {
 
     public static function getSite($host)
@@ -67,7 +67,7 @@ class Site extends \yii\db\ActiveRecord
         ]));
     }
 
-    public static function getAll()
+    /*public static function getAll()
     {
         $key = implode('-', [
             __CLASS__,
@@ -88,7 +88,7 @@ class Site extends \yii\db\ActiveRecord
                 'sites'
             ]
         ]));
-    }
+    }/* */
 
     // -------------------------------------------- auto generated -------------------------
 

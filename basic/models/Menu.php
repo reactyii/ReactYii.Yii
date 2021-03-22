@@ -37,10 +37,10 @@ use yii\caching\TagDependency;
  * @property Site $site
  * @property MenuOnSection[] $menuOnSections
  */
-class Menu extends \yii\db\ActiveRecord
+class Menu extends BaseModel
 {
 
-    public static function getAll(&$site)
+    /*public static function getAll(&$site)
     {
         $key = implode('-', [
             $site['id'],
@@ -68,7 +68,7 @@ class Menu extends \yii\db\ActiveRecord
                 'menus-' . $site['id']
             ]
         ]));
-    }
+    }/**/
 
     // -------------------------------------------- auto generated -------------------------
 

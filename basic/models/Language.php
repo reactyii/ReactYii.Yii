@@ -21,10 +21,15 @@ use yii\caching\TagDependency;
  * @property Content[] $contents
  * @property Site $site
  */
-class Language extends \yii\db\ActiveRecord
+class Language extends BaseModel
 {
+    protected static $getAllOrderBy = [
+        'is_default' => SORT_DESC, // '1' первым шоб затем нули
+        'priority' => SORT_ASC,
+        'id' => SORT_ASC
+    ];
 
-    public static function getAll(&$site)
+    /*public static function getAll(&$site)
     {
         $key = implode('-', [
             $site['id'],
@@ -52,7 +57,7 @@ class Language extends \yii\db\ActiveRecord
                 'languages-' . $site['id']
             ]
         ]));
-    }
+    }/**/
 
     // -------------------------------------------- auto generated -------------------------
 
