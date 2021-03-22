@@ -53,7 +53,7 @@ class ReactController extends Controller
         list ($site, $lang, $section, $page) = $this->parsePath(null, $path);
 
         if ($request->isAjax) {
-            sleep(3); // отладка
+            // sleep(3); // отладка
             Yii::info('prepare json data for page', __METHOD__);
             if ($path == '404.html') {
                 throw new \yii\web\NotFoundHttpException();
@@ -63,12 +63,11 @@ class ReactController extends Controller
             $response = Yii::$app->response;
             $response->format = \yii\web\Response::FORMAT_JSON;
             $seo = [
-                'title' => 'hello world for /' . $path
+                'title' => 'hello world for /' . $path,
+                'desc' => 'descr'
             ];
-            $response_data = [
-                'seo' => $seo,
-                'path' => '/' . $path
-            ];
+            $page['seo'] = $seo;
+            // $page['requestedpath'] = '/' . $path; // это не нужно. на фронте запрашиваемый путь передается в колбэке запроса (через замыкание)
             $session = [];
             $siteLM = $request->get('__siteLM');
             Yii::info('__siteLM=[' . $siteLM . '] site[lastModified]=' . $site['lastModified'], __METHOD__);
@@ -77,9 +76,9 @@ class ReactController extends Controller
                 // Yii::info('send session', __METHOD__);
             }
             if ($session)
-                $response_data['session'] = $session;
+                $page['session'] = $session;
 
-            $response->data = $response_data;
+            $response->data = $page;
             return;
         }
 
@@ -273,6 +272,14 @@ class ReactController extends Controller
         if (! $lang && sizeof($site['langs']) > 0) { // языка в пути нет и языков больше чем 1, но мы выберем язык по умолчанию
             $lang = $site['langs'][0]; // язык по умолчанию мы ставим на первое место при выборе из БД
         }
+
+        // 3. разделы
+        // ...
+
+        // 4. страница
+        $page = [
+            'content' => 'бла бла бла'
+        ];
 
         return [
             $site,
