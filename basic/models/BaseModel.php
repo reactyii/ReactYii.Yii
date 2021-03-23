@@ -12,6 +12,7 @@ abstract class BaseModel extends \yii\db\ActiveRecord
         'id' => SORT_ASC
     ];
 
+
     protected static function getAllWhere(&$site)
     {
         return $site != null ? [
@@ -20,11 +21,16 @@ abstract class BaseModel extends \yii\db\ActiveRecord
         ] : ['is_blocked' => 0];
     }
 
+    protected static function getCacheBaseKey()
+    {
+        return trim(static::tableName(), '%{}'); // вот так короче будет для наших целей
+    }
+
     public static function getAll(&$site)
     {
         $key = implode('-', [
             $site != null ? $site['id'] : '',
-            __CLASS__,
+            static::getCacheBaseKey(),
             __FUNCTION__
         ]);
         Yii::info("getAll. key=" . $key, __METHOD__);
@@ -32,25 +38,56 @@ abstract class BaseModel extends \yii\db\ActiveRecord
         return Yii::$app->cache->getOrSet($key, function () use ($key, $site) {
             Yii::info("getAll. get from DB key=" . $key, __METHOD__);
 
-            return self::find()->where(self::getAllWhere($site))
-                ->orderBy(self::getAllOrderBy)
+            return self::find()->where(static::getAllWhere($site))
+                ->orderBy(static::$getAllOrderBy)
                 ->asArray()
                 ->all();
         }, null, new TagDependency([
             'tags' => [
                 'site-' . $site['id'],
-                self::tableName() . '-' . $site['id']
+                static::getCacheBaseKey() . '-' . $site['id']
             ]
         ]));
     }
 
-    public static function getItemByField(&$site, $where, $tags)
+    public static function getItemByPage(&$site, $page, $tags=[])
     {
+        return static::getItemByField($site, ['page' => $page], $tags);
+    }
+
+    public static function getItemById(&$site, $id, $tags=[])
+    {
+        return static::getItemByField($site, ['id' => $id], $tags);
+    }
+
+    public static function getItemByField(&$site, $where, $tags=[])
+    {
+        $_key_where = [];
+        $_where = ['site_id' => $site['id']]; // это нужно для всех сущностей (кроме самого сайта, н осайт мы ресолвим по своей функцией)
+        foreach($where as $k=>$v)
+        {
+            $_key_where[] = $k . '=' . urlencode($v);
+            $_where[$k] = $v;
+        }
         $key = implode('-', [
             $site != null ? $site['id'] : '',
-            __CLASS__,
+            implode(',', $_key_where),
+            static::getCacheBaseKey(),
             __FUNCTION__
         ]);
 
+        return Yii::$app->cache->getOrSet($key, function () use ($key, $site, $_where) {
+            Yii::info("getItem. get from DB key=" . $key, __METHOD__);
+
+            return static::find()->where($_where)
+            ->asArray()
+            ->one();
+        }, null, new TagDependency([
+            'tags' => [
+                'site-' . $site['id'],
+                static::getCacheBaseKey() . '-' . $site['id'] // чтоб чистить когда чистим все кеши для данной таблицы (у списка точно такой же)
+                // а вот нужен ли ключ для отдельной записи пока хз, если понадобится мы передадим его в $tags
+            ] + $tags
+        ]));
     }
 }

@@ -2,6 +2,7 @@
 namespace app\models;
 
 use Yii;
+use yii\base\NotSupportedException;
 use yii\caching\TagDependency;
 
 /**
@@ -40,7 +41,8 @@ class Site extends BaseModel
         return Yii::$app->cache->getOrSet($key, function () use ($key, $host) {
             Yii::info("get. get from DB key=" . $key, __METHOD__);
 
-            $sites = self::getAll();
+            $tmp = null;
+            $sites = self::getAll($tmp);
             if (! $sites)
                 throw new \ErrorException('Sites not founded');
             $site = $sites[0];
@@ -52,10 +54,11 @@ class Site extends BaseModel
                     }
                 }
             }
-            // догружаем меню разделя языки
-            // ...
-
+            // догружаем меню разделы, языки, менюшки
             $site['langs'] = Language::getAll($site);
+            $site['sections'] = Section::getAll($site);
+            $site['menus'] = Menu::getAll($site);
+
             $site['lastModified'] = time(); // сохраним время генерации данных (пока не будем использовать updated_at из таблицы)
 
             return $site;
@@ -65,6 +68,16 @@ class Site extends BaseModel
                 'site-' . $host
             ]
         ]));
+    }
+
+    /**
+     * Use getSite($host) method instead.
+     *
+     * @throws NotSupportedException.
+     */
+    public static function getItemByField(&$site, $where, $tags=[])
+    {
+        throw new NotSupportedException('Use ' . __CLASS__ . '::getSite($host) method instead.');
     }
 
     /*public static function getAll()

@@ -29,7 +29,7 @@ use Yii;
  * @property Section[] $sections
  * @property Site $site
  */
-class Section extends \yii\db\ActiveRecord
+class Section extends BaseModel
 {
     /**
      * {@inheritdoc}

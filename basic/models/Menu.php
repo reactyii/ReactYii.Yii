@@ -70,6 +70,21 @@ class Menu extends BaseModel
         ]));
     }/**/
 
+    /**
+     * Делаем поиск страницы с по урлу с учетом раздела
+     *
+     */
+    public static function getItemBySectionPage(&$site, $section, $page, $tags=[])
+    {
+        $where = ['page' => $page];
+        if ($site['sections']) // с учетом раздела делаем поиск тока если разделы на сайте определены
+        {
+
+        }
+
+        return static::getItemByField($site, $where, $tags);
+    }
+
     // -------------------------------------------- auto generated -------------------------
 
     /**
