@@ -48,6 +48,8 @@ class m200429_063615_content_tables extends Migration
         $host = Console::input('Default host name [reactyii.test]:');
         if (!$host) $host = 'reactyii.test';
 
+        $needTestData = Console::input('Generate test data? (y/n)[n]:');
+
         // --------------------------------------------------------------------------------------------
         $_tn = 'site';
         $tn = '{{%' . $_tn . '}}';
@@ -116,6 +118,18 @@ class m200429_063615_content_tables extends Migration
 
         $this->_addForeignKey($_tn, 'site_id', 'site', 'id');  // при удалении сайта языки будут удалены!
 
+        if ($needTestData)
+        {
+            $this/*->db->createCommand()*/->insert($tn, [
+                'site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+                'priority' => 10, 'name' => 'Русский', 'path' => 'ru', 'is_default' => 1,
+            ]);
+            $this/*->db->createCommand()*/->insert($tn, [
+                'site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+                'priority' => 20, 'name' => 'English', 'path' => 'en', 'is_default' => 0,
+            ]);
+        }
+
         // --------------------------------------------------------------------------------------------
         $_tn = 'section';
         $tn = '{{%' . $_tn . '}}';
@@ -155,6 +169,20 @@ class m200429_063615_content_tables extends Migration
 
         $this->_addForeignKey($_tn, 'site_id', 'site', 'id');  // при удалении сайта разделы будут удалены!
         $this->_addForeignKey($_tn, 'parent_id', $_tn, 'id', 'SET NULL');  // при удалении родителя все его страницы будут премещены на верхний уровень
+
+        if ($needTestData)
+        {
+            $this/*->db->createCommand()*/->insert($tn, [
+                'site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+                'priority' => 20, 'name' => 'Раздел в поддомене', 'host' => 'subdomain.' . $host
+            ]);
+            $sect1_id = $this->db->getLastInsertID();
+            $this/*->db->createCommand()*/->insert($tn, [
+                'site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+                'priority' => 30, 'name' => 'Раздел в пути', 'path' => 'part-of-path'
+            ]);
+            $sect2_id = $this->db->getLastInsertID();
+        }
 
         // --------------------------------------------------------------------------------------------
         $_tn = 'menu';
@@ -212,6 +240,37 @@ class m200429_063615_content_tables extends Migration
         $this->_addForeignKey($_tn, 'site_id', 'site', 'id'); // при удалении сайта страницы будут удалены!
         $this->_addForeignKey($_tn, 'section_id', 'section', 'id', 'SET NULL'); // при удалении раздела все его страницы переходят в раздел по умолчанию (за уникальностью path будет следить уникальный индекс)
         $this->_addForeignKey($_tn, 'parent_id', $_tn, 'id', 'SET NULL'); // при удалении родителя все его страницы будут премещены на верхний уровень
+
+        if ($needTestData)
+        {
+            $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+                'priority' => 10, 'menu_name' => 'Главная', 'path' => 'index'
+            ]);
+            $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+                'priority' => 20, 'name' => 'О компании', 'menu_name' => 'О компании', 'path' => 'about'
+            ]);
+            $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+                'priority' => 30, 'name' => 'Контакты', 'menu_name' => 'Контакты', 'path' => 'contacts'
+            ]);
+            // все разделы
+            $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+                'priority' => 20, 'is_all_section' => 1, 'name' => 'Новости', 'menu_name' => 'Новости', 'path' => 'news'
+            ]);
+
+            // разделы
+            $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+                'priority' => 1000, 'section_id'=> $sect1_id, 'menu_name' => 'Раздел в пути', 'path' => 'index'
+            ]);
+            $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+                'priority' => 1010, 'section_id'=> $sect1_id, 'name' => 'Подробнее о разделе', 'menu_name' => 'О разделе', 'path' => 'about'
+            ]);
+            $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+                'priority' => 2000, 'section_id'=> $sect2_id, 'menu_name' => 'Раздел в домене', 'path' => 'index'
+            ]);
+            $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+                'priority' => 2010, 'section_id'=> $sect2_id, 'menu_name' => 'Статьи', 'path' => 'articles'
+            ]);
+        }
 
         // --------------------------------------------------------------------------------------------
         $_tn = 'menu_on_section';
