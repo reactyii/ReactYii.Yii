@@ -76,13 +76,43 @@ class Menu extends BaseModel
      */
     public static function getItemBySectionPage(&$site, $section, $page, $tags=[])
     {
-        $where = ['page' => $page];
+        $where = ['path=:page', 'is_blocked=0'];
+        $key = 'path=' . $page . ',is_blocked=0';
+        $whereParams = [':page' => $page];
         if ($site['sections']) // с учетом раздела делаем поиск тока если разделы на сайте определены
         {
+            if (!$section) // если раздел был в пути то берем его
+                           // а вот тут надо взять раздел по умолчанию (это раздел у которого path и host пустые или нул)
+            {
+                foreach ($site['sections'] as $s)
+                {
+                    if (!$s['path'] && !$s['host'])
+                    {
+                        $section = $s;
+                        break;
+                    }
+                }
+            }
 
+            if ($section)
+            {
+                // /news.html
+                //$where['section_id'] = $section['id']; // or is_all_section = 1
+                //$where[] = ['or', ['section_id' => $section['id']], [['is_all_section' => 1]]];
+                $where[] = '(section_id=:section or is_all_section=1)';
+                $whereParams[':section'] = $section['id'];
+                $key .= ',section_id=' . $section['id'] . ',is_all_section=1';
+            }
+            else // если раздел (скорее всего нет раздела по умолчанию) не нашли, то по идее ошибка можно писнуть в логи (но ошибка не критичная можем продолжать)
+            {
+                // это не ошибка. основной раздел не прописывается в таблице
+                //Yii::error('У сайта отсутствует раздел по умолчанию', __METHOD__);
+                $where[] = 'section_id is null'; // а вот у страницы у нас тут в обязательном порядке null
+                $key .= ',section_id=null';
+            }
         }
 
-        return static::getItemByField($site, $where, $tags);
+        return static::getItemByField($site, $where, $whereParams, $key, $tags);
     }
 
     // -------------------------------------------- auto generated -------------------------

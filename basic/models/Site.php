@@ -75,7 +75,7 @@ class Site extends BaseModel
      *
      * @throws NotSupportedException.
      */
-    public static function getItemByField(&$site, $where, $tags=[])
+    public static function getItemByField(&$site, $where, $whereParams, $uniqueWhereKey, $tags=[])
     {
         throw new NotSupportedException('Use ' . __CLASS__ . '::getSite($host) method instead.');
     }

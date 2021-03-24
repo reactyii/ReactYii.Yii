@@ -9,6 +9,8 @@ use yii\web\Response;
 // use app\models\LoginForm;
 // use app\models\ContactForm;
 use app\models\Language;
+use app\models\Menu;
+use app\models\Section;
 use app\models\Site;
 use yii\caching\TagDependency;
 
@@ -50,9 +52,13 @@ class ReactController extends Controller
 
         Yii::info('continue afterCORS', __METHOD__);
 
-        list ($site, $lang, $section, $page) = $this->parsePath(null, $path);
+        $host = null;
+        $site = Site::getSite($host);
 
         if ($request->isAjax) {
+
+            list ($lang, $section, $page) = $this->parsePath($site, $path);
+
             // sleep(3); // отладка
             Yii::info('prepare json data for page', __METHOD__);
             if ($path == '404.html') {
@@ -77,6 +83,9 @@ class ReactController extends Controller
             }
             if ($session)
                 $page['session'] = $session;
+
+            $page['section'] = $section;
+            $page['lang'] = $lang;
 
             $response->data = $page;
             return;
@@ -246,17 +255,15 @@ class ReactController extends Controller
      *
      * @return string
      */
-    private function parsePath($host, $path)
+    private function parsePath(&$site, $path)
     {
-        $site = null;
         $lang = null;
         $section = null;
         $page = null;
+        $content = null;
 
-        $parts = explode('/', $path);
-
-        // резолв сайта
-        $site = Site::getSite($host);
+        // уберем .html с конца
+        $parts = explode('/', (strrpos($path, '.html') === strlen($path)-5 ? substr($path, 0, strlen($path)-5) : $path));
 
         // 2. начнем с резолва языка, если он есть, то он занимает первую часть пути
         if (sizeof($parts) > 0) { // первая часть пути вполне может быть языком
@@ -274,18 +281,30 @@ class ReactController extends Controller
         }
 
         // 3. разделы
-        // ...
+        if (sizeof($parts) > 0) {
+            $section = Section::getItemByField($site, ['path=:path', 'is_blocked=0'], [':path' => $parts[0]], 'path=' . $parts[0] . ',is_blocked=0');
+            if ($section) {
+                array_shift($parts);
+            }
+        }
+        //Yii::info("=====> section=" . var_export($section, true), __METHOD__);
 
         // 4. страница
-        $page = [
-            'content' => 'бла бла бла'
-        ];
+        if (sizeof($parts) > 0) {
+            $page_path = $parts[0];
+        } else {
+            $page_path = 'index';
+        }
+        $page = Menu::getItemBySectionPage($site, $section, $page_path);
+        //Yii::info("=====> page=" . var_export($page, true), __METHOD__);
+
+        // еще надо заполнить контентом
 
         return [
-            $site,
             $lang,
             $section,
-            $page
+            $page,
+            $content
         ];
     }
 }

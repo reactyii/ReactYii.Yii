@@ -52,34 +52,39 @@ abstract class BaseModel extends \yii\db\ActiveRecord
 
     public static function getItemByPage(&$site, $page, $tags=[])
     {
-        return static::getItemByField($site, ['page' => $page], $tags);
+        return static::getItemByField($site, ['page=:page'], [':page' => $page], 'page=' . $page, $tags);
     }
 
     public static function getItemById(&$site, $id, $tags=[])
     {
-        return static::getItemByField($site, ['id' => $id], $tags);
+        return static::getItemByField($site, ['id=:id'], [':id' => $id], 'id=' . $id, $tags);
     }
 
-    public static function getItemByField(&$site, $where, $tags=[])
+    public static function getItemByField(&$site, $where, $whereParams, $uniqueWhereKey, $tags=[])
     {
-        $_key_where = [];
-        $_where = ['site_id' => $site['id']]; // это нужно для всех сущностей (кроме самого сайта, н осайт мы ресолвим по своей функцией)
+        //$_key_where = [];
+        /*$_where = ['site_id' => $site['id']]; // это нужно для всех сущностей (кроме самого сайта, н осайт мы ресолвим по своей функцией)
         foreach($where as $k=>$v)
         {
-            $_key_where[] = $k . '=' . urlencode($v);
+            //$_key_where[] = $k . '=' . urlencode(is_array($v) ? '' : $v);
             $_where[$k] = $v;
-        }
+        }*/
         $key = implode('-', [
             $site != null ? $site['id'] : '',
-            implode(',', $_key_where),
+            //implode(',', $_key_where),
+            $uniqueWhereKey,
             static::getCacheBaseKey(),
             __FUNCTION__
         ]);
 
-        return Yii::$app->cache->getOrSet($key, function () use ($key, $site, $_where) {
+        return Yii::$app->cache->getOrSet($key, function () use ($key, $site, $where, $whereParams) {
             Yii::info("getItem. get from DB key=" . $key, __METHOD__);
+            $query = static::find()->where(['site_id' => $site['id']]);
+            foreach ($where as $w) {
+                $query = $query->andWhere($w);
+            }
 
-            return static::find()->where($_where)
+            return $query->addParams($whereParams)//->where($_where)
             ->asArray()
             ->one();
         }, null, new TagDependency([
