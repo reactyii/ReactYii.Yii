@@ -107,8 +107,8 @@ class Menu extends BaseModel
             {
                 // это не ошибка. основной раздел не прописывается в таблице
                 //Yii::error('У сайта отсутствует раздел по умолчанию', __METHOD__);
-                $where[] = 'section_id is null'; // а вот у страницы у нас тут в обязательном порядке null
-                $key .= ',section_id=null';
+                $where[] = 'section_id is null or is_all_section=1'; // а вот у страницы у нас тут в обязательном порядке null
+                $key .= ',section_id=null,is_all_section=1';
             }
         }
 

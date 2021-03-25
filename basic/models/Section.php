@@ -3,6 +3,7 @@
 namespace app\models;
 
 use Yii;
+use yii\caching\TagDependency;
 
 /**
  * This is the model class for table "{{%section}}".
@@ -31,6 +32,17 @@ use Yii;
  */
 class Section extends BaseModel
 {
+    /**
+     * Делаем поиск страницы с по урлу с учетом раздела
+     *
+     */
+    public static function getItemByPath(&$site, $path)
+    {
+        return Section::getItemByField($site, ['path=:path', 'is_blocked=0'], [':path' => $path], 'path=' . $path . ',is_blocked=0');
+    }
+
+    // -------------------------------------------- auto generated -------------------------
+
     /**
      * {@inheritdoc}
      */

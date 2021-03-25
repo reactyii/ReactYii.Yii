@@ -3,6 +3,7 @@
 namespace app\models;
 
 use Yii;
+use yii\caching\TagDependency;
 
 /**
  * This is the model class for table "{{%content}}".
@@ -37,8 +38,92 @@ use Yii;
  * @property ContentOnMenu[] $contentOnMenus
  * @property ContentOnSection[] $contentOnSections
  */
-class Content extends \yii\db\ActiveRecord
+class Content extends BaseModel
 {
+    /**
+     * Готовим список единиц контента для страницы.
+     * Рекурсия!
+     */
+    public static function getContentForPage(&$site, &$lang, &$section, &$page, &$content_args, $parent_id = null, $recursion_level=0)
+    {
+        if ($recursion_level > 50) // константу вынести в конфиг (скорее всего могут быть сайты с очень сложным контентом)
+        {
+            Yii::warning("have reached the maximum recursion level " . $recursion_level, __METHOD__);
+            return;
+        }
+        $key = implode('-', [
+            $site != null ? $site['id'] : '',
+            $lang ? $lang['id'] : '',
+            $section ? $section['id'] : '',
+            $page['id'],
+            $parent_id != null ? $parent_id : '',
+            implode('_', $content_args),
+            static::getCacheBaseKey(),
+            __FUNCTION__
+        ]);
+        Yii::info("getContentForPage. key=" . $key, __METHOD__);
+
+        $contentList = Yii::$app->cache->getOrSet($key, function () use ($key, $site, $section, $content_args, $parent_id) {
+            Yii::info("getContentForPage. get from DB key=" . $key, __METHOD__);
+
+            $query = self::find()
+                ->select('c.*, t.type, t.settings_json')
+                ->from(static::tablename() . ' c')
+                ->join('LEFT JOIN', Template::tableName() . ' as t' ,  'c.template = t.key')
+                ->where([
+                    'c.site_id' => $site['id'],
+                    'c.is_blocked' => 0,
+                    'c.parent_id' => $parent_id,
+                    'c.language_id' => null, // NB! делаем поиск строго для языка по умолчанию (пеервод будем делать позднее, его может тупо не быть для какого-то промежуточного узла)
+                ]);
+            if ($section)
+            {
+                $query = $query->andWhere('section_id=:section or is_all_section=1', [':section' => $section['id']]);
+            }
+            else
+            {
+                $query = $query->andWhere(['section_id' => null]);
+            }
+
+            return $query->orderBy([
+                'priority' => SORT_ASC,
+                'id' => SORT_ASC
+            ])
+            ->asArray()
+            ->all();
+        }, null, new TagDependency([
+            'tags' => [
+                'site-' . $site['id'],
+                static::getCacheBaseKey() . '-' . $site['id'],
+                'page-' . $page['id'] // чтобы при изменении одной единицы контента скинуть все для конкретной страницы
+            ]
+        ]));
+
+        if ($contentList) // если хоть что-то есть в списке
+        {
+            foreach ($contentList as $k=>$c)
+            {
+                // если тип контента это список, то в $content_args у нас могут быть переданы параметры типа номер текущей страницы или имя конкретного элемента
+                if ($c['type'] == 'list') // $c['type'] это тип шаблона
+                {
+                    //if()
+
+                }
+                $contentList[$k]['childs'] = static::getContentForPage($site, $lang, $section, $page, $content_args, $c['id'], $recursion_level + 1);
+            }
+
+            // а вот после прохождения всего списка у нас должен быть абсолютно пустой $content_args и если это не так, то мы должны выдать 404, чтоб поисковики не ползали там где не надо
+            if (sizeof($content_args)>0)
+            {
+                throw new \yii\web\NotFoundHttpException();
+            }
+        }
+
+        return $contentList;
+    }
+
+    // -------------------------------------------- auto generated -------------------------
+
     /**
      * {@inheritdoc}
      */

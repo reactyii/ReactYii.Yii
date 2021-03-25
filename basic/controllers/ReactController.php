@@ -12,6 +12,7 @@ use app\models\Language;
 use app\models\Menu;
 use app\models\Section;
 use app\models\Site;
+use app\models\Content;
 use yii\caching\TagDependency;
 
 class ReactController extends Controller
@@ -282,7 +283,7 @@ class ReactController extends Controller
 
         // 3. разделы
         if (sizeof($parts) > 0) {
-            $section = Section::getItemByField($site, ['path=:path', 'is_blocked=0'], [':path' => $parts[0]], 'path=' . $parts[0] . ',is_blocked=0');
+            $section = Section::getItemByPath($site, $parts[0]);
             if ($section) {
                 array_shift($parts);
             }
@@ -292,13 +293,19 @@ class ReactController extends Controller
         // 4. страница
         if (sizeof($parts) > 0) {
             $page_path = $parts[0];
+            array_shift($parts);
         } else {
-            $page_path = 'index';
+            $page_path = 'index.html';
         }
         $page = Menu::getItemBySectionPage($site, $section, $page_path);
         //Yii::info("=====> page=" . var_export($page, true), __METHOD__);
+        if (!$page)
+        {
+            throw new \yii\web\NotFoundHttpException();
+        }
 
         // еще надо заполнить контентом
+        $content = Content::getContentForPage($site, $lang, $section, $page, $parts);
 
         return [
             $lang,
