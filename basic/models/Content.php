@@ -40,6 +40,7 @@ use yii\caching\TagDependency;
  */
 class Content extends BaseModel
 {
+
     /**
      * Готовим список единиц контента для страницы.
      * Рекурсия!
@@ -63,7 +64,7 @@ class Content extends BaseModel
         ]);
         Yii::info("getContentForPage. key=" . $key, __METHOD__);
 
-        $contentList = Yii::$app->cache->getOrSet($key, function () use ($key, $site, $section, $content_args, $parent_id) {
+        $contentList = Yii::$app->cache->getOrSet($key, function () use ($key, $site, $page, $section, $content_args, $parent_id) {
             Yii::info("getContentForPage. get from DB key=" . $key, __METHOD__);
 
             $query = self::find()
@@ -72,13 +73,16 @@ class Content extends BaseModel
                 ->join('LEFT JOIN', Template::tableName() . ' as t' ,  'c.template = t.key')
                 ->where([
                     'c.site_id' => $site['id'],
-                    'c.is_blocked' => 0,
-                    'c.parent_id' => $parent_id,
-                    'c.language_id' => null, // NB! делаем поиск строго для языка по умолчанию (пеервод будем делать позднее, его может тупо не быть для какого-то промежуточного узла)
+                    //'c.parent_id' => $parent_id,
                 ]);
+
+            $query = $query->andWhere('c.page_id=:pageid or c.is_all_menu=1', [':pageid' => $page['id']])
+                ->andWhere('c.is_blocked=0')
+                ->andWhere(['c.language_id' => null]);// NB! делаем поиск строго для языка по умолчанию (пеервод будем делать позднее, его может тупо не быть для какого-то промежуточного узла)
+
             if ($section)
             {
-                $query = $query->andWhere('section_id=:section or is_all_section=1', [':section' => $section['id']]);
+                $query = $query->andWhere('section_id=:sectionid or is_all_section=1', [':sectionid' => $section['id']]);
             }
             else
             {

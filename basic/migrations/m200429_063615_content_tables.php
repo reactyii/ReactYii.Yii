@@ -1,5 +1,6 @@
 <?php
 
+use app\models\Template;
 use yii\db\Migration;
 use yii\helpers\Console;
 
@@ -243,31 +244,31 @@ class m200429_063615_content_tables extends Migration
 
         if ($needTestData)
         {
-            $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+            $menu_index_id = $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
                 'priority' => 10, 'menu_name' => 'Главная', 'path' => 'index'
             ]);
-            $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+            $menu_about_id = $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
                 'priority' => 20, 'name' => 'О компании', 'menu_name' => 'О компании', 'path' => 'about'
             ]);
-            $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+            $menu_contacts_id = $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
                 'priority' => 30, 'name' => 'Контакты', 'menu_name' => 'Контакты', 'path' => 'contacts'
             ]);
             // все разделы
-            $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+            $menu_news_id = $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
                 'priority' => 20, 'is_all_section' => 1, 'name' => 'Новости', 'menu_name' => 'Новости', 'path' => 'news'
             ]);
 
             // разделы
-            $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+            $menu_s1_index_id = $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
                 'priority' => 1000, 'section_id'=> $sect1_id, 'menu_name' => 'Раздел в пути', 'path' => 'index'
             ]);
-            $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+            $menu_s1_about_id = $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
                 'priority' => 1010, 'section_id'=> $sect1_id, 'name' => 'Подробнее о разделе', 'menu_name' => 'О разделе', 'path' => 'about'
             ]);
-            $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+            $menu_s2_index_id = $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
                 'priority' => 2000, 'section_id'=> $sect2_id, 'menu_name' => 'Раздел в домене', 'path' => 'index'
             ]);
-            $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+            $menu_s2_articles_id = $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
                 'priority' => 2010, 'section_id'=> $sect2_id, 'menu_name' => 'Статьи', 'path' => 'articles'
             ]);
         }
@@ -280,6 +281,7 @@ class m200429_063615_content_tables extends Migration
         $this->createTable($tn, [
             'id' => $this->bigPrimaryKey(),
             'site_id' => $this->bigInteger()->notNull(),
+            'priority' => $this->integer()->defaultValue(100)->notNull()->comment('Поле для сортировки. По возрастанию'),
 
             'menu_id' => $this->bigInteger()->notNull()->comment('Страница'),
             'section_id' => $this->bigInteger()->comment('Id раздела в котором находится страница. Если NULL, то это раздел по умолчанию'),
@@ -287,6 +289,7 @@ class m200429_063615_content_tables extends Migration
         ], $_tableOptions);
 
         $this->_createIndex($_tn, ['site_id']);
+        $this->_createIndex($_tn, ['priority']);
         $this->_createIndex($_tn, ['menu_id']);
         $this->_createIndex($_tn, ['section_id']);
 
@@ -325,6 +328,13 @@ class m200429_063615_content_tables extends Migration
 
         $this->_addForeignKey($_tn, 'site_id', 'site', 'id');  // при удалении сайта шаблоны будут удалены!
 
+        if ($needTestData)
+        {
+            $templ_news_list_id = $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+                'priority' => 10, 'type' => Template::TYPE_LIST, 'key'=>'newslist', 'name' => 'Новости (список)', 'path' => 'index'
+            ]);
+        }
+
         // --------------------------------------------------------------------------------------------
         $_tn = 'content';
         $tn = '{{%' . $_tn . '}}';
@@ -350,6 +360,8 @@ class m200429_063615_content_tables extends Migration
             'is_all_section' => $this->tinyInteger()->notNull()->defaultValue(0)->comment('Для всех разделов'),
             'is_all_menu' => $this->tinyInteger()->notNull()->defaultValue(0)->comment('Для всех страниц'),
 
+            'path' => $this->string()->comment('Путь для кодирования в урл. Используем для формирования линка на элемент списка.'), // тут может быть нул!
+
             'name' => $this->string()->notNull(), // это значение исключительно для админа
 
             'template' => $this->string()->comment('Ссылка на шаблон для отрисовки данной единицы. Например, для списков или составных блоков. Если NULL, то вставляем как текст.'),
@@ -358,6 +370,7 @@ class m200429_063615_content_tables extends Migration
 
             'search_words' => $this->text()->comment('Слова для поиска. При сохранении здесь формируем список слов для поиска.'),
             'template_keys_json' => $this->text()->comment('Список ключей для вставки в родительский шаблон или для вставки на страницу.'),
+            'settings_json' => $this->text()->comment('Настройки контента (переопределяет настройки шаблона). Для списков число элементов на странице, для картинок параметры изображения.'),
 
             // списковая ед контента может переопределить сео страницы
             'seo_title' => $this->text()->comment('SEO Title'),
@@ -383,6 +396,25 @@ class m200429_063615_content_tables extends Migration
         $this->_addForeignKey($_tn, 'section_id', 'section', 'id', 'SET NULL'); // при удалении раздела единица контента не удаляется
         $this->_addForeignKey($_tn, 'menu_id', 'menu', 'id', 'SET NULL'); // при удалении страницы не удаляем
 
+        if ($needTestData)
+        {
+            // контент для index
+            $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+                'priority' => 10, 'type' => Template::TYPE_TEXT, 'menu_id'=>$menu_index_id, 'section_id' =>null, 'name' => 'Главная текстовый блок', 'content'=>'Content for index <b>sample bold</b>.'
+            ]);
+
+            // контент для about
+            $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+                'priority' => 10, 'type' => Template::TYPE_TEXT, 'template' => 'h1', 'menu_id'=>$menu_about_id, 'section_id' =>null, 'name' => 'About h1', 'content'=>'О компании'
+            ]);
+            $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+                'priority' => 10, 'type' => Template::TYPE_TEXT, 'menu_id'=>$menu_about_id, 'section_id' =>null, 'name' => 'About текстовый блок', 'content'=>'Content for about <b>sample bold</b>.'
+            ]);
+
+            // $sect1_id
+
+        }
+
         // --------------------------------------------------------------------------------------------
         $_tn = 'content_on_section';
         $tn = '{{%' . $_tn . '}}';
@@ -391,6 +423,7 @@ class m200429_063615_content_tables extends Migration
         $this->createTable($tn, [
             'id' => $this->bigPrimaryKey(),
             'site_id' => $this->bigInteger()->notNull(),
+            'priority' => $this->integer()->defaultValue(100)->notNull()->comment('Поле для сортировки. По возрастанию'),
 
             'content_id' => $this->bigInteger()->notNull(),
             'section_id' => $this->bigInteger()->comment('Id раздела в котором находится контент. Если NULL, то это раздел по умолчанию'),
@@ -398,6 +431,7 @@ class m200429_063615_content_tables extends Migration
         ], $_tableOptions);
 
         $this->_createIndex($_tn, ['site_id']);
+        $this->_createIndex($_tn, ['priority']);
         $this->_createIndex($_tn, ['content_id']);
         $this->_createIndex($_tn, ['section_id']);
 
@@ -413,6 +447,7 @@ class m200429_063615_content_tables extends Migration
         $this->createTable($tn, [
             'id' => $this->bigPrimaryKey(),
             'site_id' => $this->bigInteger()->notNull(),
+            'priority' => $this->integer()->defaultValue(100)->notNull()->comment('Поле для сортировки. По возрастанию'),
 
             'content_id' => $this->bigInteger()->notNull()->comment('Страница'),
             'menu_id' => $this->bigInteger()->notNull()->comment('Cтраница где показываем контент.'),
@@ -420,6 +455,7 @@ class m200429_063615_content_tables extends Migration
         ], $_tableOptions);
 
         $this->_createIndex($_tn, ['site_id']);
+        $this->_createIndex($_tn, ['priority']);
         $this->_createIndex($_tn, ['content_id']);
         $this->_createIndex($_tn, ['menu_id']);
 

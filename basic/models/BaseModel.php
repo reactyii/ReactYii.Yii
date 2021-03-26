@@ -3,6 +3,7 @@ namespace app\models;
 
 use Yii;
 use yii\caching\TagDependency;
+use phpDocumentor\Reflection\Types\Static_;
 
 abstract class BaseModel extends \yii\db\ActiveRecord
 {
@@ -95,4 +96,54 @@ abstract class BaseModel extends \yii\db\ActiveRecord
             ] + $tags
         ]));
     }
+
+    /**
+     * Преобразуем список в ассоциативный массив по ключу (обычно по id)
+     *
+     */
+    public static function listToHash(&$list, $keyName = 'id')
+    {
+        $res = [];
+        array_map($list, function($v) use (&$res, $keyName) {
+            $res[$v[$keyName]] = $v;
+        });
+        /*foreach ($list as $v)
+        {
+            $res[$v[$keyName]] = $v;
+        }*/
+        return $res;
+    }
+
+    /**
+     * Преобразуем ассоциативный массив в дерево.
+     *
+     */
+    public static function hashToTree(&$list, $idName='id', $childsName = 'childs', $parentName = 'parent_id')
+    {
+        $tree = [];
+        foreach ($list as $v)
+        {
+            if ($v[$parentName]) // парент есть значит вставляем его в чилдсы паренту
+            {
+                if (isset($list[$v[$parentName]]))
+                {
+                    if(!isset($list[$v[$parentName]][$childsName])) $list[$v[$parentName]][$childsName] = [];
+                    $list[$v[$parentName]][$childsName] = $v;
+                }
+                else // у нас нарушена целостность данных в БД
+                {
+                    Yii::error('Нарушена целостность данных в БД. Таблица: ' . static::tableName() . ' Итем с id=' . $v[$idName] . ' отсутствует парент с ид: ' . $v[$parentName], __METHOD__);
+                }
+            }
+        }
+        foreach ($list as $v)
+        {
+            if (!$v[$parentName]) // тока корневые узлы
+            {
+                $tree[] = $v;
+            }
+        }
+        return $tree;
+    }
+
 }

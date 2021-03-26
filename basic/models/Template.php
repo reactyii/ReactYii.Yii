@@ -3,6 +3,7 @@
 namespace app\models;
 
 use Yii;
+use yii\caching\TagDependency;
 
 /**
  * This is the model class for table "{{%template}}".
@@ -22,8 +23,16 @@ use Yii;
  *
  * @property Site $site
  */
-class Template extends \yii\db\ActiveRecord
+class Template extends BaseModel
 {
+    const TYPE_LIST = 'list';
+    const TYPE_TEXT = 'text';
+    const TYPE_NUMBER = 'number';
+    const TYPE_STRING = 'string';
+    const TYPE_DATE = 'date';
+    //const TYPE_ = '';
+
+    // -------------------------------------------- auto generated -------------------------
     /**
      * {@inheritdoc}
      */
