@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# git update-index --chmod=+x migrate.sh
+
 #https://www.yiiframework.com/doc/guide/2.0/ru/db-migrations#reverting-migrations
 
 yii migrate --interactive=0
