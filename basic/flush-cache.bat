@@ -1,0 +1,1 @@
+@yii cache/flush-all
