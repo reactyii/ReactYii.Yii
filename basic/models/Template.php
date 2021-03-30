@@ -25,12 +25,40 @@ use yii\caching\TagDependency;
  */
 class Template extends BaseModel
 {
-    const TYPE_LIST = 'list';
-    const TYPE_TEXT = 'text';
-    const TYPE_NUMBER = 'number';
-    const TYPE_STRING = 'string';
-    const TYPE_DATE = 'date';
-    //const TYPE_ = '';
+    // ----------------------- атомарные единицы контента - примитивы
+    // не будем делать отдельный тип для группировки
+    //const TYPE_CONTENT = 'content'; // сделаем возможность группировки единиц контента. короче нода с этим типом может содержать другие единицы контента
+
+    // так как данный тип по умолчанию, то константа для его обозначения не нужна. в таблице контента вместо шаблона всегда будет указан NULL
+    // если единица контента имеет дочерние узлы и заполненное поле content, то пока будем отображать дочерние узлы (поле content игнорируем)
+    // кстати это вриант для переводов. перевод на языки идет дочерним узлом. потестируем уточним удобно ли так будет пока хз
+    //const TYPE_HTML = 'html'; // этот тип будет тип по умолчанию. также данный тип будем использовать для группировки других единиц контента
+
+    const TYPE_NUMBER = 'number'; // число. параметры отображения в настройках типа и единицы контента
+    const TYPE_STRING = 'string'; // простая строка без html атрибутов. может имет чилдов с переводами
+    const TYPE_DATE = 'date'; // тип дата
+    const TYPE_TIME = 'time'; // тип время
+    const TYPE_DATETIME = 'datetime'; // тип дата время
+    const TYPE_IMAGE = 'image'; // картинка
+    const TYPE_FILE = 'file'; // файл
+
+    // ----------------------- сложные единицы контента. всегда содержат дочерние элементы
+    const TYPE_LIST = 'list'; // тип список с пагинатором! с переходом на страницу с единицей окнтента (статьи, новости, списки итемов в админке)
+    const TYPE_IMGGALLERY = 'img_gallery'; // галерея картинок
+
+    // ----------------------- формы и их элементы
+    const TYPE_FIELD_SELECT = 'field_select'; // список опций (может иметь атрибут "multiple", также может иметь атрибут "view" равный "select" или "radiocheckbox" (списко чекбоксов или радио кнопок в зависимости от значение "multiple"))
+    const TYPE_FIELD_OPTION = 'field_option'; // опция всегда дочерняя для ноды с типом TYPE_FIELD_SELECT
+    //const TYPE_FIELD_CHECKBOX = ''; //
+    //const TYPE_FIELD_RADIO = ''; //
+    //const TYPE_FIELD_GROUP_RADIO = ''; //
+
+    const TYPE_FIELD_INPUT = 'field_input'; // type=password, text, number, hidden ...
+    const TYPE_FIELD_TEXTAREA = 'field_textarea'; //
+
+    const TYPE_FORM = 'form'; // форма всегда содержит TYPE_FIELD_* но всегда в прямых потомках, элементы формы могут быть глубоко в потомках потомков
+    const TYPE_FIELD_GROUP = 'fieldgroup'; // группа полей формы, может быть списком группы (пример список адресов доставки ("адрес", "получатель") добавить группу удалить)
+
 
     // -------------------------------------------- auto generated -------------------------
     /**

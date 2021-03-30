@@ -43,58 +43,70 @@ class Content extends BaseModel
 
     /**
      * Готовим список единиц контента для страницы.
-     * Рекурсия!
+     *
      */
-    public static function getContentForPage(&$site, &$lang, &$section, &$page, &$content_args, $parent_id = null, $recursion_level=0)
+    public static function getContentForPage(&$site, &$lang, &$section, &$page, &$content_args)
     {
-        if ($recursion_level > 50) // константу вынести в конфиг (скорее всего могут быть сайты с очень сложным контентом)
-        {
-            Yii::warning("have reached the maximum recursion level " . $recursion_level, __METHOD__);
-            return;
-        }
         $key = implode('-', [
             $site != null ? $site['id'] : '',
             $lang ? $lang['id'] : '',
             $section ? $section['id'] : '',
             $page['id'],
-            $parent_id != null ? $parent_id : '',
+            //$parent_id != null ? $parent_id : '',
             implode('_', $content_args),
             static::getCacheBaseKey(),
             __FUNCTION__
         ]);
         Yii::info("getContentForPage. key=" . $key, __METHOD__);
 
-        $contentList = Yii::$app->cache->getOrSet($key, function () use ($key, $site, $page, $section, $content_args, $parent_id) {
+        $contentList = Yii::$app->cache->getOrSet($key, function () use ($key, $site, $page, $section, $content_args) {
             Yii::info("getContentForPage. get from DB key=" . $key, __METHOD__);
 
             $query = self::find()
-                ->select('c.*, t.type, t.settings_json')
-                ->from(static::tablename() . ' c')
-                ->join('LEFT JOIN', Template::tableName() . ' as t' ,  'c.template = t.key')
+                //->select('c.*, t.type, t.settings_json')
+                // так как у нас контентов может быть много и все они сериализуются и идут на фронт то делаем сразу оптимизацию и убираем все лишнее
+                // названия полей таблицы НЕ будем делать короче (все современные браузеры поддерживают сжатие ответа сервера)
+                ->select('c.id, c.priority, c.parent_id, c.path, c.content, c.template_keys_json, c.settings_json, t.type, t.settings_json as template_settings_json') // нужны ли language_id section_id menu_id
+                ->from(static::tablename() . '  c')
+                // вот почему я не долюбливаю всякие ормы! при join оно сцуко делает 2 доп НЕНУЖНЫХ запроса на резолв структуры таблицы
+                // SHOW FULL COLUMNS FROM `content`
+                // и SELECT ... FROM `information_schema`.`REFERENTIAL_CONSTRAINTS` AS `rc`
+                ->join('LEFT JOIN', Template::tableName() . ' t' ,  'c.template = t.key')
                 ->where([
                     'c.site_id' => $site['id'],
                     //'c.parent_id' => $parent_id,
                 ]);
 
-            $query = $query->andWhere('c.page_id=:pageid or c.is_all_menu=1', [':pageid' => $page['id']])
+            $query = $query->andWhere('c.menu_id=:menuid or c.is_all_menu=1', [':menuid' => $page['id']])
                 ->andWhere('c.is_blocked=0')
                 ->andWhere(['c.language_id' => null]);// NB! делаем поиск строго для языка по умолчанию (пеервод будем делать позднее, его может тупо не быть для какого-то промежуточного узла)
 
             if ($section)
             {
-                $query = $query->andWhere('section_id=:sectionid or is_all_section=1', [':sectionid' => $section['id']]);
+                $query = $query->andWhere('c.section_id=:sectionid or c.is_all_section=1', [':sectionid' => $section['id']]);
             }
             else
             {
-                $query = $query->andWhere(['section_id' => null]);
+                $query = $query->andWhere(['c.section_id' => null]);
             }
 
-            return $query->orderBy([
-                'priority' => SORT_ASC,
-                'id' => SORT_ASC
+            $list = $query->orderBy([
+                'c.priority' => SORT_ASC,
+                'c.id' => SORT_ASC
             ])
             ->asArray()
             ->all();
+            // Yii::info("getContentForPage. ----------------------------------- request to db end " . $key, __METHOD__);
+
+            static::json_decode($list, ['template_keys_json' => 'template_keys', 'settings_json' => 'settings', 'template_settings_json' => 'template_settings']);
+
+            Yii::info("getContentForPage. source list=" . var_export($list, true), __METHOD__);
+
+            $list = static::listToHash($list);
+
+            Yii::info("getContentForPage. hash=" . var_export($list, true), __METHOD__);
+
+            return static::hashToTree($list);
         }, null, new TagDependency([
             'tags' => [
                 'site-' . $site['id'],
@@ -113,11 +125,11 @@ class Content extends BaseModel
                     //if()
 
                 }
-                $contentList[$k]['childs'] = static::getContentForPage($site, $lang, $section, $page, $content_args, $c['id'], $recursion_level + 1);
+                //$contentList[$k]['childs'] = static::getContentForPage($site, $lang, $section, $page, $content_args, $c['id'], $recursion_level + 1);
             }
 
             // а вот после прохождения всего списка у нас должен быть абсолютно пустой $content_args и если это не так, то мы должны выдать 404, чтоб поисковики не ползали там где не надо
-            if (sizeof($content_args)>0)
+            if (sizeof($content_args) > 0)
             {
                 throw new \yii\web\NotFoundHttpException();
             }

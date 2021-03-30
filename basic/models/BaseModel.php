@@ -104,9 +104,9 @@ abstract class BaseModel extends \yii\db\ActiveRecord
     public static function listToHash(&$list, $keyName = 'id')
     {
         $res = [];
-        array_map($list, function($v) use (&$res, $keyName) {
+        array_map(function($v) use (&$res, $keyName) {
             $res[$v[$keyName]] = $v;
-        });
+        }, $list);
         /*foreach ($list as $v)
         {
             $res[$v[$keyName]] = $v;
@@ -127,8 +127,8 @@ abstract class BaseModel extends \yii\db\ActiveRecord
             {
                 if (isset($list[$v[$parentName]]))
                 {
-                    if(!isset($list[$v[$parentName]][$childsName])) $list[$v[$parentName]][$childsName] = [];
-                    $list[$v[$parentName]][$childsName] = $v;
+                    if (!isset($list[$v[$parentName]][$childsName])) $list[$v[$parentName]][$childsName] = [];
+                    $list[$v[$parentName]][$childsName][] = $v;
                 }
                 else // у нас нарушена целостность данных в БД
                 {
@@ -144,6 +144,25 @@ abstract class BaseModel extends \yii\db\ActiveRecord
             }
         }
         return $tree;
+    }
+
+    /**
+     * Десериализуем жсоны в списке
+     *
+    */
+    public static function json_decode(&$list, $fields, $remove_source = true, $depth = 512, $options = 0) {
+        array_walk($list, function(&$row) use ($fields, $remove_source, $depth, $options) {
+            foreach ($fields as $k => $v) {
+                if ($row[$k]) {
+                    $row[$v] = json_decode($row[$k], true, $depth, $options);
+                }
+                // нулы не будем делать. пока не вижу особой разницы делать проверку на нулл или undefined
+                /*else {
+                    $row[$v] = null;
+                }*/
+                if ($remove_source) unset ($row[$k]);
+            }
+        });
     }
 
 }

@@ -74,11 +74,11 @@ class Menu extends BaseModel
      * Делаем поиск страницы с по урлу с учетом раздела
      *
      */
-    public static function getItemBySectionPage(&$site, $section, $page, $tags=[])
+    public static function getItemBySectionPage(&$site, $section, $page_path, $tags=[])
     {
         $where = ['path=:page', 'is_blocked=0'];
-        $key = 'path=' . $page . ',is_blocked=0';
-        $whereParams = [':page' => $page];
+        $key = 'path=' . $page_path . ',is_blocked=0';
+        $whereParams = [':page' => $page_path];
         if ($site['sections']) // с учетом раздела делаем поиск тока если разделы на сайте определены
         {
             if (!$section) // если раздел был в пути то берем его

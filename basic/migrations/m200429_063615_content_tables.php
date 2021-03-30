@@ -244,33 +244,48 @@ class m200429_063615_content_tables extends Migration
 
         if ($needTestData)
         {
-            $menu_index_id = $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+            $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
                 'priority' => 10, 'menu_name' => 'Главная', 'path' => 'index'
             ]);
-            $menu_about_id = $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+            $menu_index_id = $this->db->getLastInsertID();
+            //Yii::info('------> $menu_index_id=' . $menu_index_id);
+
+            $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
                 'priority' => 20, 'name' => 'О компании', 'menu_name' => 'О компании', 'path' => 'about'
             ]);
-            $menu_contacts_id = $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+            $menu_about_id = $this->db->getLastInsertID();
+
+            $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
                 'priority' => 30, 'name' => 'Контакты', 'menu_name' => 'Контакты', 'path' => 'contacts'
             ]);
+            $menu_contacts_id = $this->db->getLastInsertID();
+
             // все разделы
-            $menu_news_id = $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+            $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
                 'priority' => 20, 'is_all_section' => 1, 'name' => 'Новости', 'menu_name' => 'Новости', 'path' => 'news'
             ]);
+            $menu_news_id = $this->db->getLastInsertID();
 
             // разделы
-            $menu_s1_index_id = $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+            $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
                 'priority' => 1000, 'section_id'=> $sect1_id, 'menu_name' => 'Раздел в пути', 'path' => 'index'
             ]);
-            $menu_s1_about_id = $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+            $menu_s1_index_id = $this->db->getLastInsertID();
+
+            $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
                 'priority' => 1010, 'section_id'=> $sect1_id, 'name' => 'Подробнее о разделе', 'menu_name' => 'О разделе', 'path' => 'about'
             ]);
-            $menu_s2_index_id = $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+            $menu_about_id = $this->db->getLastInsertID();
+
+            $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
                 'priority' => 2000, 'section_id'=> $sect2_id, 'menu_name' => 'Раздел в домене', 'path' => 'index'
             ]);
-            $menu_s2_articles_id = $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+            $menu_s2_index_id = $this->db->getLastInsertID();
+
+            $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
                 'priority' => 2010, 'section_id'=> $sect2_id, 'menu_name' => 'Статьи', 'path' => 'articles'
             ]);
+            $menu_s2_articles_id = $this->db->getLastInsertID();
         }
 
         // --------------------------------------------------------------------------------------------
@@ -330,9 +345,10 @@ class m200429_063615_content_tables extends Migration
 
         if ($needTestData)
         {
-            $templ_news_list_id = $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
-                'priority' => 10, 'type' => Template::TYPE_LIST, 'key'=>'newslist', 'name' => 'Новости (список)', 'path' => 'index'
+            $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+                'priority' => 10, 'type' => Template::TYPE_LIST, 'key'=>'newslist', 'name' => 'Новости (список)'
             ]);
+            $templ_news_list_id = $this->db->getLastInsertID();
         }
 
         // --------------------------------------------------------------------------------------------
@@ -400,15 +416,23 @@ class m200429_063615_content_tables extends Migration
         {
             // контент для index
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
-                'priority' => 10, 'type' => Template::TYPE_TEXT, 'menu_id'=>$menu_index_id, 'section_id' =>null, 'name' => 'Главная текстовый блок', 'content'=>'Content for index <b>sample bold</b>.'
+                'priority' => 10, 'menu_id'=>$menu_index_id, 'section_id' =>null, 'name' => 'Главная текстовый блок контэйнер', 'content'=>''
+            ]);
+            $index_cont_id = $this->db->getLastInsertID();
+
+            $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+                'priority' => 10, 'parent_id' => $index_cont_id, 'menu_id'=>$menu_index_id, 'section_id' =>null, 'name' => 'Главная текстовый блок № 1', 'content'=>'<p>1 Block Content for index <b>sample bold</b>.</p>'
+            ]);
+            $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+                'priority' => 20, 'parent_id' => $index_cont_id, 'menu_id'=>$menu_index_id, 'section_id' =>null, 'name' => 'Главная текстовый блок № 2', 'content'=>'<p>2 Block Content for index <b>sample bold</b>.</p>'
             ]);
 
             // контент для about
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
-                'priority' => 10, 'type' => Template::TYPE_TEXT, 'template' => 'h1', 'menu_id'=>$menu_about_id, 'section_id' =>null, 'name' => 'About h1', 'content'=>'О компании'
+                'priority' => 10, 'template' => 'h1', 'menu_id'=>$menu_about_id, 'section_id' =>null, 'name' => 'About h1', 'content'=>'О компании'
             ]);
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
-                'priority' => 10, 'type' => Template::TYPE_TEXT, 'menu_id'=>$menu_about_id, 'section_id' =>null, 'name' => 'About текстовый блок', 'content'=>'Content for about <b>sample bold</b>.'
+                'priority' => 10, 'menu_id'=>$menu_about_id, 'section_id' =>null, 'name' => 'About текстовый блок', 'content'=>'Content for about <b>sample bold</b>.'
             ]);
 
             // $sect1_id

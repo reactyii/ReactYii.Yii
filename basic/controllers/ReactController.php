@@ -58,7 +58,7 @@ class ReactController extends Controller
 
         if ($request->isAjax) {
 
-            list ($lang, $section, $page) = $this->parsePath($site, $path);
+            list ($lang, $section, $page, $content) = $this->parsePath($site, $path);
 
             // sleep(3); // отладка
             Yii::info('prepare json data for page', __METHOD__);
@@ -87,6 +87,7 @@ class ReactController extends Controller
 
             $page['section'] = $section;
             $page['lang'] = $lang;
+            $page['content'] = $content;
 
             $response->data = $page;
             return;
@@ -266,8 +267,16 @@ class ReactController extends Controller
         // уберем .html с конца
         $parts = explode('/', (strrpos($path, '.html') === strlen($path)-5 ? substr($path, 0, strlen($path)-5) : $path));
 
+        // чисто для оптимизации если путь пустой то $parts = [''] и мы делаем поиск по языкам и разделам
+        // НО! надо протестировать такой адрес yii.test// и в этом случае по идее должна быть 404!
+        // решение на пустые части в пути (кроме строго единственного) будем кидать 404
+        if (sizeof($parts) === 1 && $parts[0] === '') array_shift($parts);
+
+        Yii::info('=====> $parts[' . $path . ']=' . var_export($parts, true), __METHOD__);
+
         // 2. начнем с резолва языка, если он есть, то он занимает первую часть пути
         if (sizeof($parts) > 0) { // первая часть пути вполне может быть языком
+            if ($parts[0] === '') throw new \yii\web\NotFoundHttpException();
             foreach ($site['langs'] as $l) {
                 if ($l['path'] === $parts[0]) { // так и есть
                     $lang = $l;
@@ -283,6 +292,7 @@ class ReactController extends Controller
 
         // 3. разделы
         if (sizeof($parts) > 0) {
+            if ($parts[0] === '') throw new \yii\web\NotFoundHttpException();
             $section = Section::getItemByPath($site, $parts[0]);
             if ($section) {
                 array_shift($parts);
@@ -291,12 +301,15 @@ class ReactController extends Controller
         //Yii::info("=====> section=" . var_export($section, true), __METHOD__);
 
         // 4. страница
+        $page_path = '';
         if (sizeof($parts) > 0) {
+            if ($parts[0] === '') throw new \yii\web\NotFoundHttpException();
             $page_path = $parts[0];
             array_shift($parts);
-        } else {
-            $page_path = 'index.html';
         }
+        if ($page_path === '') $page_path = 'index';
+
+        Yii::info('=====> $page_path=' . $page_path, __METHOD__);
         $page = Menu::getItemBySectionPage($site, $section, $page_path);
         //Yii::info("=====> page=" . var_export($page, true), __METHOD__);
         if (!$page)
@@ -306,6 +319,7 @@ class ReactController extends Controller
 
         // еще надо заполнить контентом
         $content = Content::getContentForPage($site, $lang, $section, $page, $parts);
+        Yii::info('=====> $content[' . $path . ']=' . var_export($content, true), __METHOD__);
 
         return [
             $lang,
