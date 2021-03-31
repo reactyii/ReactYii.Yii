@@ -376,7 +376,9 @@ class m200429_063615_content_tables extends Migration
             'is_all_section' => $this->tinyInteger()->notNull()->defaultValue(0)->comment('Для всех разделов'),
             'is_all_menu' => $this->tinyInteger()->notNull()->defaultValue(0)->comment('Для всех страниц'),
 
-            'path' => $this->string()->comment('Путь для кодирования в урл. Используем для формирования линка на элемент списка.'), // тут может быть нул!
+            'is_list_item' => $this->tinyInteger()->notNull()->defaultValue(0)->comment('Признак элемента списка. Нужен для оптимизации запроса.'),
+
+            'path' => $this->string()->comment('Путь для кодирования в урл. Используем для формирования линка на элемент списка и на сам список тоже (при создании пагинатора).'), // тут может быть нул!
 
             'name' => $this->string()->notNull(), // это значение исключительно для админа
 
