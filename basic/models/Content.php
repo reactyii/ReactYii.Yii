@@ -43,15 +43,16 @@ class Content extends BaseModel
 
     private static $_sel = 'c.id, c.priority, c.parent_id, c.path, c.content, c.template_keys_json, c.settings_json, t.type, t.settings_json as template_settings_json'; // нужны ли language_id section_id menu_id
 
-    public static function getContentForList(&$site, &$lang, &$section, &$page, &$content_args, $listContent, $offset, $limit, $item = null)
+    public static function getContentForList(&$site, &$lang, &$section, &$page, $listContent, $offset, $limit, $item = null)
     {
         // в кеш не загоняем так как мы загоним в кеш все узлы контента для страницы
 
+        $count = null;
         $query = self::find()
         //->select('c.*, t.type, t.settings_json')
         // так как у нас контентов может быть много и все они сериализуются и идут на фронт то делаем сразу оптимизацию и убираем все лишнее
         // названия полей таблицы НЕ будем делать короче (все современные браузеры поддерживают сжатие ответа сервера)
-        ->select(static::$_sel)
+        //->select(static::$_sel)
         ->from(static::tablename() . '  c')
         // вот почему я не долюбливаю всякие ормы! при join оно сцуко делает 2 доп НЕНУЖНЫХ запроса на резолв структуры таблицы
         // SHOW FULL COLUMNS FROM `content`
@@ -81,24 +82,32 @@ class Content extends BaseModel
 
         if ($item === null)
         {
-            // добавить офсет и лимит
-            // ...
-            $list = $query->orderBy([
+            // для начала вычислим коунт
+            $countRow = $query->select('count(*)')->asArray()->one();
+            $count = $countRow[0];
+
+            // может редирект сделать на первую страницу? но для SEO важнее 404
+            if ($offset > $count)
+                new \yii\web\NotFoundHttpException();
+
+            $list = $query->select(static::$_sel)->orderBy([
                 'c.priority' => SORT_ASC,
                 'c.id' => SORT_ASC
             ])
                 ->asArray()
+                ->limit($limit)->offset($offset)
                 ->all();
         }
         else
         {
             $query = $query->andWhere('c.page=:path', [':path' => $item]);
             $list = $query
-               ->asArray()
+                ->select('c.*, t.type, t.settings_json as template_settings_json') // при вытаскивании поштучно нам нужны уже все данные
+                ->asArray()
                 ->one();
         }
 
-        return $list;
+        return [$list, $count];
     }
 
     /**
@@ -188,7 +197,7 @@ class Content extends BaseModel
                             if (ctype_digit($content_args[0])) // не будем вводить лишних сущностей и слов в путь. если число то считаем его номеров страницы, если строка то это path единицы списка
                             {
                                 $offset = array_shift($content_args);
-                                list($_listDatas, $count) = static::getContentForList($site, $lang, $section, $page, $content_args, $c, $offset * $limit, $limit);
+                                list($_listDatas, $count) = static::getContentForList($site, $lang, $section, $page, $c, $offset * $limit, $limit);
                                 $listDatas += $_listDatas;
                                 $list[$k]['count'] = $count;
                                 $list[$k]['offset'] = $offset;
@@ -196,7 +205,7 @@ class Content extends BaseModel
                             else
                             {
                                 $item = array_shift($content_args);
-                                list($_listDatas, $count) = static::getContentForList($site, $lang, $section, $page, $content_args, $c, null, null, $item);
+                                list($_listDatas, $count) = static::getContentForList($site, $lang, $section, $page, $c, null, null, $item);
 
                                 // а вот тут мы должны заменить? сам список элементом - НЕТ.
                                 // здесь мы должны
@@ -209,7 +218,7 @@ class Content extends BaseModel
                                 Yii::error("getContentForPage. not implemented yet", __METHOD__);
                             }
 
-                            // нельзя прерывать break; так как мы должны заполнить другие спсики по крайней мере перовой страницей
+                            // нельзя прерывать break; так как мы должны заполнить другие списки по крайней мере перовой страницей
                             //break;
 
                             // здесь должно быть так - мы можем зайти тока в 1 список строго
@@ -249,6 +258,8 @@ class Content extends BaseModel
 
                 $list += $listDatas; // позже мы сварганим корректное дерево
             }
+
+
 
             Yii::info("getContentForPage. source list=" . var_export($list, true), __METHOD__);
 
