@@ -221,7 +221,7 @@ class m200429_063615_content_tables extends Migration
             'url'  => $this->string(1024)->comment('Внешний URL. Если path is NULL and page_id is NULL, то в меню вставляем внешний линк и target="_blank"'),
 
             'search_words' => $this->text()->comment('Слова для поиска. При сохранении страницы здесь формируем список слов для поиска.'),
-            'template_keys_json' => $this->text()->comment('Список ключей для вставки в шаблон (TOP_MENU,FOOTER_MENU,LEFT_MENU). Каждый пункт меню может располагаться в нескольких местах на странице (верхнее, нижнее и боковое меню).'),
+            'content_keys_json' => $this->text()->comment('Список ключей для вставки в шаблон (TOP_MENU,FOOTER_MENU,LEFT_MENU). Каждый пункт меню может располагаться в нескольких местах на странице (верхнее, нижнее и боковое меню).'),
 
             'seo_title' => $this->text()->comment('SEO Title'),
             'seo_description' => $this->text()->comment('SEO description meta tag'),
@@ -275,7 +275,7 @@ class m200429_063615_content_tables extends Migration
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
                 'priority' => 1010, 'section_id'=> $sect1_id, 'name' => 'Подробнее о разделе', 'menu_name' => 'О разделе', 'path' => 'about'
             ]);
-            $menu_about_id = $this->db->getLastInsertID();
+            $menu_s1_about_id = $this->db->getLastInsertID();
 
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
                 'priority' => 2000, 'section_id'=> $sect2_id, 'menu_name' => 'Раздел в домене', 'path' => 'index'
@@ -346,9 +346,22 @@ class m200429_063615_content_tables extends Migration
         if ($needTestData)
         {
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
-                'priority' => 10, 'type' => Template::TYPE_LIST, 'key'=>'newslist', 'name' => 'Новости (список)'
+                'priority' => 10, 'type' => Template::TYPE_LIST, 'key'=>'NewsList', 'name' => 'Новости (список)'
             ]);
             $templ_news_list_id = $this->db->getLastInsertID();
+
+            $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+                'priority' => 10, 'key' => 'TestTable', 'name' => 'Шаблон таблица', 'template' => '<table>{{ROWS}}</table>'
+            ]);
+            $templ_table_id = $this->db->getLastInsertID();
+            $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+                'priority' => 10, 'parent_id'=>$templ_table_id, 'key'=>'TestTableRow', 'name' => 'Шаблон строка таблицы', 'template'=>'<tr>{{COLS}}</tr>'
+            ]);
+            $templ_tablerow_id = $this->db->getLastInsertID();
+            $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+                'priority' => 10, 'parent_id'=>$templ_tablerow_id, 'key'=>'TestTableCol', 'name' => 'Шаблон ячейка таблицы', 'template'=>'<td>{{CONTENT}}</td>'
+            ]);
+
         }
 
         // --------------------------------------------------------------------------------------------
@@ -371,7 +384,7 @@ class m200429_063615_content_tables extends Migration
             //'type' => $this->string(30)->notNull()->defaultValue('text')->comment('Тип единицы контента: list, text, string, block, image... Тип единицы однозначно определяет шаблон, но могут быть примитивы, например текст или число'),
 
             // где показывать контент - много ко многим!
-            'menu_id' => $this->bigInteger()->comment('Главная страница где размещен контент. Пока не знаю нужно это или нет'),
+            'menu_id' => $this->bigInteger()->comment('Главная страница где размещен контент. Используется для оптимизации, чтобы сразу вытащить весь контент для страницы. Кроме списковых элементов (is_list_item=1).'),
             'section_id' => $this->bigInteger()->comment('Главный раздел в котором находится контент. Если NULL, то это раздел по умолчанию. Например, иногда бывает фишка, что сначала показываем новости раздела, а потом все остальные.'),
             'is_all_section' => $this->tinyInteger()->notNull()->defaultValue(0)->comment('Для всех разделов'),
             'is_all_menu' => $this->tinyInteger()->notNull()->defaultValue(0)->comment('Для всех страниц'),
@@ -382,12 +395,14 @@ class m200429_063615_content_tables extends Migration
 
             'name' => $this->string()->notNull(), // это значение исключительно для админа
 
-            'template' => $this->string()->comment('Ссылка на шаблон для отрисовки данной единицы. Например, для списков или составных блоков. Если NULL, то вставляем как текст.'),
+            'template_key' => $this->string()->comment('Ссылка на шаблон для отрисовки данной единицы. Например, для списков или составных блоков. Если NULL, то вставляем как текст.'),
 
             'content' => $this->text()->comment('Сам контент.'),
 
             'search_words' => $this->text()->comment('Слова для поиска. При сохранении здесь формируем список слов для поиска.'),
-            'template_keys_json' => $this->text()->comment('Список ключей для вставки в родительский шаблон или для вставки на страницу.'),
+
+            'content_keys_json' => $this->text()->comment('Список ключей для вставки в родительский шаблон или для вставки на страницу. Определяет конкретные места куда будет вставлен данный элемент.'),
+
             'settings_json' => $this->text()->comment('Настройки контента (переопределяет настройки шаблона). Для списков число элементов на странице, для картинок параметры изображения.'),
 
             // списковая ед контента может переопределить сео страницы
@@ -420,22 +435,46 @@ class m200429_063615_content_tables extends Migration
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
                 'priority' => 10, 'menu_id'=>$menu_index_id, 'section_id' =>null, 'name' => 'Главная текстовый блок контэйнер', 'content'=>''
             ]);
-            $index_cont_id = $this->db->getLastInsertID();
+            $index_cid = $this->db->getLastInsertID();
 
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
-                'priority' => 10, 'parent_id' => $index_cont_id, 'menu_id'=>$menu_index_id, 'section_id' =>null, 'name' => 'Главная текстовый блок № 1', 'content'=>'<p>1 Block Content for index <b>sample bold</b>.</p>'
+                'priority' => 10, 'parent_id' => $index_cid, 'menu_id'=>$menu_index_id, 'section_id' =>null, 'name' => 'Главная текстовый блок № 1', 'content'=>'<p>1 Block Content for index <b>sample bold</b>.</p>'
             ]);
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
-                'priority' => 20, 'parent_id' => $index_cont_id, 'menu_id'=>$menu_index_id, 'section_id' =>null, 'name' => 'Главная текстовый блок № 2', 'content'=>'<p>2 Block Content for index <b>sample bold</b>.</p>'
+                'priority' => 20, 'parent_id' => $index_cid, 'menu_id'=>$menu_index_id, 'section_id' =>null, 'name' => 'Главная текстовый блок № 2', 'content'=>'<p>2 Block Content for index <b>sample bold</b>.</p>'
             ]);
 
             // контент для about
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
-                'priority' => 10, 'template' => 'h1', 'menu_id'=>$menu_about_id, 'section_id' =>null, 'name' => 'About h1', 'content'=>'О компании'
+                'priority' => 10, 'template_key' => 'H1', 'menu_id'=>$menu_about_id, 'section_id' =>null, 'name' => 'About h1', 'content'=>'<u>О</u> компании'
             ]);
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
-                'priority' => 10, 'menu_id'=>$menu_about_id, 'section_id' =>null, 'name' => 'About текстовый блок', 'content'=>'Content for about <b>sample bold</b>.'
+                'priority' => 20, 'menu_id'=>$menu_about_id, 'section_id' =>null, 'name' => 'About текстовый блок', 'content'=>'Content for about <b>sample bold</b>.'
             ]);
+            // --таблица
+            $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+                'priority' => 10, 'menu_id'=>$menu_about_id, 'section_id' =>null, 'name' => 'About пример таблицы', 'template_key'=>'TestTable'
+            ]);
+            $about_table_cid = $this->db->getLastInsertID();
+            $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+                'parent_id' => $about_table_cid,
+                'content_keys_json' => json_encode(['ROWS']),
+                'priority' => 10, 'menu_id'=>$menu_about_id, 'section_id' =>null, 'name' => 'About 1 строка таблицы', 'template_key'=>'TestTableRow'
+            ]);
+            $about_table_row1_cid = $this->db->getLastInsertID();
+            $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+                'parent_id' => $about_table_row1_cid,
+                'content_keys_json' => json_encode(['COLS']),
+                'priority' => 10, 'menu_id'=>$menu_about_id, 'section_id' =>null, 'name' => 'About 1 строка 1 ячейка таблицы', 'template_key'=>'TestTableCol', 'content'=>'col <b>11</b>'
+            ]);
+            $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+                'parent_id' => $about_table_row1_cid,
+                'content_keys_json' => json_encode(['COLS']),
+                // в шаблоны записанные в БД низя передать настройки %( кроме каких-то совсем общих параметров
+                //'settings_json' => json_encode(['align' => 'center']),
+                'priority' => 20, 'menu_id'=>$menu_about_id, 'section_id' =>null, 'name' => 'About 1 строка 2 ячейка таблицы', 'template_key'=>'TestTableCol', 'content'=>'col <b>12</b>'
+            ]);
+            // --/конец таблицы
 
             // $sect1_id
 

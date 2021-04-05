@@ -21,10 +21,10 @@ use yii\caching\TagDependency;
  * @property int $is_all_section Для всех разделов
  * @property int $is_all_menu Для всех страниц
  * @property string $name
- * @property string|null $template Ссылка на шаблон для отрисовки данной единицы. Например, для списков или составных блоков. Если NULL, то вставляем как текст.
+ * @property string|null $template_key Ссылка на шаблон для отрисовки данной единицы. Например, для списков или составных блоков. Если NULL, то вставляем как текст.
  * @property string|null $content Сам контент.
  * @property string|null $search_words Слова для поиска. При сохранении здесь формируем список слов для поиска.
- * @property string|null $template_keys_json Список ключей для вставки в родительский шаблон или для вставки на страницу.
+ * @property string|null $content_keys_json Список ключей для вставки в родительский шаблон или для вставки на страницу.
  * @property string|null $seo_title SEO Title
  * @property string|null $seo_description SEO description meta tag
  * @property string|null $seo_keywords SEO keywords meta tag
@@ -41,7 +41,7 @@ use yii\caching\TagDependency;
 class Content extends BaseModel
 {
 
-    private static $_sel = 'c.id, c.priority, c.parent_id, c.path, c.content, c.template_keys_json, c.settings_json, t.type, t.settings_json as template_settings_json'; // нужны ли language_id section_id menu_id
+    private static $_sel = 'c.id, c.priority, c.parent_id, c.path, c.content, c.template_key, c.content_keys_json, c.settings_json, t.type, t.template, t.settings_json as template_settings_json'; // нужны ли language_id section_id menu_id
 
     public static function getContentForList(&$site, &$lang, &$section, &$page, $listContent, $offset, $limit, $item = null)
     {
@@ -57,7 +57,7 @@ class Content extends BaseModel
         // вот почему я не долюбливаю всякие ормы! при join оно сцуко делает 2 доп НЕНУЖНЫХ запроса на резолв структуры таблицы
         // SHOW FULL COLUMNS FROM `content`
         // и SELECT ... FROM `information_schema`.`REFERENTIAL_CONSTRAINTS` AS `rc`
-        ->join('LEFT JOIN', Template::tableName() . ' t' ,  'c.template = t.key')
+        ->join('LEFT JOIN', Template::tableName() . ' t' ,  'c.template_key = t.key')
         ->where([
             'c.site_id' => $site['id'],
             //'c.parent_id' => $parent_id,
@@ -83,6 +83,7 @@ class Content extends BaseModel
         if ($item === null)
         {
             // для начала вычислим коунт
+            // при вычислении count можно похерить join для оптимизации! todo!
             $countRow = $query->select('count(*)')->asArray()->one();
             $count = $countRow[0];
 
@@ -140,7 +141,7 @@ class Content extends BaseModel
                 // вот почему я не долюбливаю всякие ормы! при join оно сцуко делает 2 доп НЕНУЖНЫХ запроса на резолв структуры таблицы
                 // SHOW FULL COLUMNS FROM `content`
                 // и SELECT ... FROM `information_schema`.`REFERENTIAL_CONSTRAINTS` AS `rc`
-                ->join('LEFT JOIN', Template::tableName() . ' t' ,  'c.template = t.key')
+                ->join('LEFT JOIN', Template::tableName() . ' t' ,  'c.template_key = t.key')
                 ->where([
                     'c.site_id' => $site['id'],
                     //'c.parent_id' => $parent_id,
@@ -170,7 +171,8 @@ class Content extends BaseModel
             ->all();
             // Yii::info("getContentForPage. ----------------------------------- request to db end " . $key, __METHOD__);
 
-            static::json_decode($list, ['template_keys_json' => 'template_keys', 'settings_json' => 'settings', 'template_settings_json' => 'template_settings']);
+            // надо как то смержить настройки самого элемента и настройки шаблона, я так думаю берем за основу настройки элемента и дополняем из шаблона отсутствующие
+            static::json_decode($list, ['content_keys_json' => 'content_keys', 'settings_json' => 'settings', 'template_settings_json' => 'template_settings']);
 
             // а вот после загрузки основного контента мы сделаем подгрузку элементов списка с учетом пагинации или детальной инфы
             if ($list) // если хоть что-то есть в списке
@@ -298,7 +300,7 @@ class Content extends BaseModel
             [['site_id', 'created_at', 'name'], 'required'],
             [['site_id', 'priority', 'is_blocked', 'parent_id', 'language_id', 'menu_id', 'section_id', 'is_all_section', 'is_all_menu'], 'integer'],
             [['created_at', 'updated_at'], 'safe'],
-            [['content', 'search_words', 'template_keys_json', 'seo_title', 'seo_description', 'seo_keywords'], 'string'],
+            [['content', 'search_words', 'content_keys_json', 'seo_title', 'seo_description', 'seo_keywords'], 'string'],
             [['name', 'template'], 'string', 'max' => 255],
             [['language_id'], 'exist', 'skipOnError' => true, 'targetClass' => Language::className(), 'targetAttribute' => ['language_id' => 'id']],
             [['menu_id'], 'exist', 'skipOnError' => true, 'targetClass' => Menu::className(), 'targetAttribute' => ['menu_id' => 'id']],
@@ -330,7 +332,7 @@ class Content extends BaseModel
             'template' => 'Template',
             'content' => 'Content',
             'search_words' => 'Search Words',
-            'template_keys_json' => 'Template Keys Json',
+            'content_keys_json' => 'Content Keys Json',
             'seo_title' => 'Seo Title',
             'seo_description' => 'Seo Description',
             'seo_keywords' => 'Seo Keywords',

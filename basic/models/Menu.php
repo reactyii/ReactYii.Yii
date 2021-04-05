@@ -23,7 +23,7 @@ use yii\caching\TagDependency;
  * @property int|null $menu_id Линк на внутренню страницу. Если path is NULL, то в меню вставляем линк на внутренню страницу
  * @property string|null $url Внешний URL. Если path is NULL and page_id is NULL, то в меню вставляем внешний линк и target="_blank"
  * @property string|null $search_words Слова для поиска. При сохранении страницы здесь формируем список слов для поиска.
- * @property string|null $template_keys_json Список ключей для вставки в шаблон (TOP_MENU,FOOTER_MENU,LEFT_MENU). Каждый пункт меню может располагаться в нескольких местах на странице (верхнее, нижнее и боковое меню).
+ * @property string|null $content_keys_json Список ключей для вставки в шаблон (TOP_MENU,FOOTER_MENU,LEFT_MENU). Каждый пункт меню может располагаться в нескольких местах на странице (верхнее, нижнее и боковое меню).
  * @property string|null $seo_title SEO Title
  * @property string|null $seo_description SEO description meta tag
  * @property string|null $seo_keywords SEO keywords meta tag
@@ -163,7 +163,7 @@ class Menu extends BaseModel
             [
                 [
                     'search_words',
-                    'template_keys_json',
+                    'content_keys_json',
                     'seo_title',
                     'seo_description',
                     'seo_keywords',
@@ -257,7 +257,7 @@ class Menu extends BaseModel
             'menu_id' => 'Menu ID',
             'url' => 'Url',
             'search_words' => 'Search Words',
-            'template_keys_json' => 'Template Keys Json',
+            'content_keys_json' => 'Content Keys Json',
             'seo_title' => 'Seo Title',
             'seo_description' => 'Seo Description',
             'seo_keywords' => 'Seo Keywords',
