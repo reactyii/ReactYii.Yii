@@ -229,7 +229,7 @@ class Content extends BaseModel
                         }
                         else // заполняем первую страницу
                         {
-                            list($_listDatas, $count) = static::getContentForList($site, $lang, $section, $page, $content_args, $c, 0, $limit);
+                            list($_listDatas, $count) = static::getContentForList($site, $lang, $section, $page, $c, 0, $limit);
                             $listDatas += $_listDatas;
                             $list[$k]['count'] = $count;
                             $list[$k]['offset'] = 0;
