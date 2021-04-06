@@ -121,14 +121,15 @@ abstract class BaseModel extends \yii\db\ActiveRecord
     public static function hashToTree(&$list, $idName='id', $childsName = 'childs', $parentName = 'parent_id')
     {
         $tree = [];
-        foreach ($list as $v)
+        foreach ($list as $k => $v)
         {
             if ($v[$parentName]) // парент есть значит вставляем его в чилдсы паренту
             {
+                //Yii::info("-----" . var_export($v[$parentName], true), __METHOD__);
                 if (isset($list[$v[$parentName]]))
                 {
                     if (!isset($list[$v[$parentName]][$childsName])) $list[$v[$parentName]][$childsName] = [];
-                    $list[$v[$parentName]][$childsName][] = $v;
+                    $list[$v[$parentName]][$childsName][] = &$list[$k]; // NB! &$ альтернатива делать рекурсию
                 }
                 else // у нас нарушена целостность данных в БД
                 {
@@ -136,6 +137,7 @@ abstract class BaseModel extends \yii\db\ActiveRecord
                 }
             }
         }
+        //Yii::info("====" . var_export($list, true), __METHOD__);
         foreach ($list as $v)
         {
             if (!$v[$parentName]) // тока корневые узлы
