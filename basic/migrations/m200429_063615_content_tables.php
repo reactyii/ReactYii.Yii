@@ -326,7 +326,8 @@ class m200429_063615_content_tables extends Migration
 
             'parent_id' => $this->bigInteger()->comment('Шаблон может быть составным. Здесь укажем ид родительского шаблона.'),
 
-            'type' => $this->string(30)->notNull()->defaultValue('text')->comment('Для какого типа контента: page, layout, list, text, string, block, image ...'),
+            'type' => $this->string(30)->defaultValue(null)//->notNull()->defaultValue('text')
+                ->comment('Для какого типа контента: page, layout, list, text, string, block, image ...'),
 
             'key' => $this->string()->notNull()->comment('Ключ шаблона для ссылки на него из других таблиц.'),
             'name' => $this->string()->notNull()->comment('Название шаблона для людей'),
@@ -351,15 +352,15 @@ class m200429_063615_content_tables extends Migration
             $templ_news_list_id = $this->db->getLastInsertID();
 
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
-                'priority' => 10, 'key' => 'TestTable', 'name' => 'Шаблон таблица', 'template' => '<table>{{ROWS}}</table>'
+                'priority' => 10, 'key' => 'TestTable', 'name' => 'Шаблон таблица', 'template' => '<div class="conteiner"><div class="table">{{ROWS}}</div></div>'
             ]);
             $templ_table_id = $this->db->getLastInsertID();
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
-                'priority' => 10, 'parent_id'=>$templ_table_id, 'key'=>'TestTableRow', 'name' => 'Шаблон строка таблицы', 'template'=>'<tr>{{COLS}}</tr>'
+                'priority' => 10, 'parent_id'=>$templ_table_id, 'key'=>'TestTableRow', 'name' => 'Шаблон строка таблицы', 'template'=>'<div class="row">{{COLS}}</div>'
             ]);
             $templ_tablerow_id = $this->db->getLastInsertID();
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
-                'priority' => 10, 'parent_id'=>$templ_tablerow_id, 'key'=>'TestTableCol', 'name' => 'Шаблон ячейка таблицы', 'template'=>'<td>{{CONTENT}}</td>'
+                'priority' => 10, 'parent_id'=>$templ_tablerow_id, 'key'=>'TestTableCol', 'name' => 'Шаблон ячейка таблицы', 'template'=>'<span class="col">{{CONTENT}}</span>'
             ]);
 
         }
