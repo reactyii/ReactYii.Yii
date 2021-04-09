@@ -171,13 +171,14 @@ class m200429_063615_content_tables extends Migration
         $this->_addForeignKey($_tn, 'site_id', 'site', 'id');  // при удалении сайта разделы будут удалены!
         $this->_addForeignKey($_tn, 'parent_id', $_tn, 'id', 'SET NULL');  // при удалении родителя все его страницы будут премещены на верхний уровень
 
+        $this->insert($tn, [
+            'site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+            'priority' => 100500, 'name' => 'Админка', 'path' => 'admin'
+        ]);
+        $admin_sect_id = $this->db->getLastInsertID();
+
         if ($needTestData)
         {
-            $this->insert($tn, [
-                'site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
-                'priority' => 100500, 'name' => 'Админка', 'path' => 'admin'
-            ]);
-            $admin_sect_id = $this->db->getLastInsertID();
             $this/*->db->createCommand()*/->insert($tn, [
                 'site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
                 'priority' => 20, 'name' => 'Раздел в поддомене', 'host' => 'subdomain.' . $host
@@ -247,6 +248,21 @@ class m200429_063615_content_tables extends Migration
         $this->_addForeignKey($_tn, 'section_id', 'section', 'id', 'SET NULL'); // при удалении раздела все его страницы переходят в раздел по умолчанию (за уникальностью path будет следить уникальный индекс)
         $this->_addForeignKey($_tn, 'parent_id', $_tn, 'id', 'SET NULL'); // при удалении родителя все его страницы будут премещены на верхний уровень
 
+        $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+            'priority' => 100500, 'section_id'=> $admin_sect_id, 'menu_name' => 'Личный кабинет', 'path' => 'index'
+        ]);
+        $menu_admin_index_id = $this->db->getLastInsertID();
+
+        $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+            'priority' => 100600, 'section_id'=> $admin_sect_id, 'menu_name' => 'Список страниц', 'path' => 'pages'
+        ]);
+        $menu_admin_pages_id = $this->db->getLastInsertID();
+
+        $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+            'priority' => 100700, 'section_id'=> $admin_sect_id, 'menu_name' => 'Список контента', 'path' => 'contents'
+        ]);
+        $menu_admin_contents_id = $this->db->getLastInsertID();
+
         if ($needTestData)
         {
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
@@ -291,11 +307,6 @@ class m200429_063615_content_tables extends Migration
                 'priority' => 2010, 'section_id'=> $sect2_id, 'menu_name' => 'Статьи', 'path' => 'articles'
             ]);
             $menu_s2_articles_id = $this->db->getLastInsertID();
-
-            $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
-                'priority' => 100500, 'section_id'=> $admin_sect_id, 'menu_name' => 'Личный кабинет', 'path' => 'index'
-            ]);
-            $menu_admin_index_id = $this->db->getLastInsertID();
 
         }
 
@@ -443,6 +454,19 @@ class m200429_063615_content_tables extends Migration
         $this->_addForeignKey($_tn, 'section_id', 'section', 'id', 'SET NULL'); // при удалении раздела единица контента не удаляется
         $this->_addForeignKey($_tn, 'menu_id', 'menu', 'id', 'SET NULL'); // при удалении страницы не удаляем
 
+        // --список контента
+        $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+            'settings_json' => json_encode(['max_on_page' => '4']),
+            'model' => 'pages',
+            'priority' => 100600, 'template_key' => 'ListPages', 'menu_id'=>$menu_admin_pages_id, 'section_id' =>$admin_sect_id, 'name' => 'Страницы', 'content'=>''
+        ]);
+
+        $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+            'settings_json' => json_encode(['max_on_page' => '4']),
+            'model' => 'content',
+            'priority' => 100700, 'template_key' => 'ListContent', 'menu_id'=>$menu_admin_contents_id, 'section_id' =>$admin_sect_id, 'name' => 'Список контента', 'content'=>''
+        ]);
+
         if ($needTestData)
         {
             // контент для index
@@ -491,16 +515,7 @@ class m200429_063615_content_tables extends Migration
             ]);
             // --/конец таблицы
 
-            // --список контента
-            $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
-                'settings_json' => json_encode(['max_on_page' => '4']),
-                'model' => 'content',
-                'priority' => 10, 'template_key' => 'ListContent', 'menu_id'=>$menu_about_id, 'section_id' =>null, 'name' => 'Список контента', 'content'=>''
-            ]);
-
-
             // $sect1_id
-
         }
 
         // --------------------------------------------------------------------------------------------

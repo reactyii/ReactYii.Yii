@@ -287,11 +287,11 @@ class Content extends BaseModel
 
 
 
-            Yii::info("getContentForPage. source list=" . var_export($list, true), __METHOD__);
+            //Yii::info("getContentForPage. source list=" . var_export($list, true), __METHOD__);
 
             $list = static::listToHash($list);
 
-            Yii::info("getContentForPage. hash=" . var_export($list, true), __METHOD__);
+            //Yii::info("getContentForPage. hash=" . var_export($list, true), __METHOD__);
 
             return static::hashToTree($list);
         }, null, new TagDependency([
