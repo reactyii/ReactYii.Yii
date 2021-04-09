@@ -145,7 +145,7 @@ class ReactController extends Controller
         return Yii::$app->cache->getOrSet($key, function () use ($key, $site, $path, $result) {
             Yii::info("eval setSSR for cachekey=" . $key, __METHOD__);
 
-            $ssr_path = rtrim(Yii::getAlias('@reactSSR', '/\\'));
+            $ssr_path = rtrim(Yii::getAlias('@reactSSR'), '/\\');
 
             $filename = $path;
             switch ($path) {
