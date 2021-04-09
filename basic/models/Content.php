@@ -4,6 +4,8 @@ namespace app\models;
 
 use Yii;
 use yii\caching\TagDependency;
+use app\components\ListContentBase;
+use yii\web\ServerErrorHttpException;
 
 /**
  * This is the model class for table "{{%content}}".
@@ -21,6 +23,7 @@ use yii\caching\TagDependency;
  * @property int $is_all_section Для всех разделов
  * @property int $is_all_menu Для всех страниц
  * @property string $name
+ * @property string $model
  * @property string|null $template_key Ссылка на шаблон для отрисовки данной единицы. Например, для списков или составных блоков. Если NULL, то вставляем как текст.
  * @property string|null $content Сам контент.
  * @property string|null $search_words Слова для поиска. При сохранении здесь формируем список слов для поиска.
@@ -40,12 +43,33 @@ use yii\caching\TagDependency;
  */
 class Content extends BaseModel
 {
+    private static $_list = [];
+    public static function registerContentList($id, ListContentBase $obj)
+    {
+        static::$_list[$id] = $obj;
+    }
 
-    private static $_sel = 'c.id, c.priority, c.parent_id, c.path, c.content, c.template_key, c.content_keys_json, c.settings_json, t.type, t.template, t.settings_json as template_settings_json'; // нужны ли language_id section_id menu_id
+    private static $_sel = 'c.id, c.priority, c.parent_id, c.path, c.model, c.content, c.template_key, c.content_keys_json, c.settings_json, t.type, t.template, t.settings_json as template_settings_json'; // нужны ли language_id section_id menu_id
 
+    /**
+     * @throws ServerErrorHttpException
+     */
     public static function getContentForList(&$site, &$lang, &$section, &$page, $listContent, $offset, $limit, $item = null)
     {
         // в кеш не загоняем так как мы загоним в кеш все узлы контента для страницы
+
+        // пробуем найти обработчки списка
+        if (isset($listContent['model']) && $listContent['model']) // список по модели
+        {
+            if (!isset(static::$_list[$listContent['model']]))
+            {
+                $mess = 'Отсутствует обработчик для списка: "' . $listContent['model'] . '"';
+                //Yii::error($mess, __METHOD__);
+                throw new ServerErrorHttpException($mess);
+            }
+
+            return static::$_list[$listContent['model']]->getContentForList($site, $lang, $section, $page, $listContent, $offset, $limit, $item);
+        }
 
         $count = null;
         $query = self::find()

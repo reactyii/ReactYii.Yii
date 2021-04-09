@@ -102,6 +102,12 @@ $config = [
 
     'params' => $params
 ];
+if (isset($settings['contentComponents'])) {
+    foreach ($settings['contentComponents'] as $id => $comp) {
+        $config['components'][$id] = $comp;
+        $config['bootstrap'][] = $id;
+    }
+}
 
 if (YII_ENV_DEV) {
     // configuration adjustments for 'dev' environment

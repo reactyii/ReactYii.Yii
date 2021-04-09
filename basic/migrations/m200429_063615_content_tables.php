@@ -173,6 +173,11 @@ class m200429_063615_content_tables extends Migration
 
         if ($needTestData)
         {
+            $this->insert($tn, [
+                'site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+                'priority' => 100500, 'name' => 'Админка', 'path' => 'admin'
+            ]);
+            $admin_sect_id = $this->db->getLastInsertID();
             $this/*->db->createCommand()*/->insert($tn, [
                 'site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
                 'priority' => 20, 'name' => 'Раздел в поддомене', 'host' => 'subdomain.' . $host
@@ -286,6 +291,12 @@ class m200429_063615_content_tables extends Migration
                 'priority' => 2010, 'section_id'=> $sect2_id, 'menu_name' => 'Статьи', 'path' => 'articles'
             ]);
             $menu_s2_articles_id = $this->db->getLastInsertID();
+
+            $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+                'priority' => 100500, 'section_id'=> $admin_sect_id, 'menu_name' => 'Личный кабинет', 'path' => 'index'
+            ]);
+            $menu_admin_index_id = $this->db->getLastInsertID();
+
         }
 
         // --------------------------------------------------------------------------------------------
@@ -396,6 +407,8 @@ class m200429_063615_content_tables extends Migration
 
             'name' => $this->string()->notNull(), // это значение исключительно для админа
 
+            'model' => $this->string()->notNull()->comment('Имя модели по которой делается список. Также, если тип форма, то указывает на обработчика формы. Если Null, то данные в этой же таблице.'),
+
             'template_key' => $this->string()->comment('Ссылка на шаблон для отрисовки данной единицы. Например, для списков или составных блоков. Если NULL, то вставляем как текст.'),
 
             'content' => $this->text()->comment('Сам контент.'),
@@ -447,6 +460,7 @@ class m200429_063615_content_tables extends Migration
 
             // контент для about
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+                'settings_json' => json_encode(['align' => 'center']),
                 'priority' => 10, 'template_key' => 'H1', 'menu_id'=>$menu_about_id, 'section_id' =>null, 'name' => 'About h1', 'content'=>'<u>О</u> компании'
             ]);
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
@@ -476,6 +490,14 @@ class m200429_063615_content_tables extends Migration
                 'priority' => 20, 'menu_id'=>$menu_about_id, 'section_id' =>null, 'name' => 'About 1 строка 2 ячейка таблицы', 'template_key'=>'TestTableCol', 'content'=>'col <b>12</b>'
             ]);
             // --/конец таблицы
+
+            // --список контента
+            $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+                'settings_json' => json_encode(['max_on_page' => '4']),
+                'model' => 'content',
+                'priority' => 10, 'template_key' => 'ListContent', 'menu_id'=>$menu_about_id, 'section_id' =>null, 'name' => 'Список контента', 'content'=>''
+            ]);
+
 
             // $sect1_id
 

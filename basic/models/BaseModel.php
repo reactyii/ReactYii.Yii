@@ -121,7 +121,7 @@ abstract class BaseModel extends \yii\db\ActiveRecord
     public static function hashToTree(&$list, $idName='id', $childsName = 'childs', $parentName = 'parent_id')
     {
         $tree = [];
-        foreach ($list as $k => $v)
+        foreach ($list as $k => $v) // не стоит делать &$v как то оно не очень предсказуемо работает (см пример с foreach https://www.php.net/manual/ru/language.references.php)
         {
             if ($v[$parentName]) // парент есть значит вставляем его в чилдсы паренту
             {
