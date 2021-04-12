@@ -256,6 +256,7 @@ class ReactController extends Controller
      * Если базовый хоост не определен в конфиге, то просто пытаемся отрезолвить раздел по домену
      *
      * @return string
+     * @throws \yii\web\NotFoundHttpException
      */
     private function parsePath(&$site, $path)
     {

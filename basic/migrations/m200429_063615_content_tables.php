@@ -528,6 +528,8 @@ class m200429_063615_content_tables extends Migration
             'site_id' => $this->bigInteger()->notNull(),
             'priority' => $this->integer()->defaultValue(100)->notNull()->comment('Поле для сортировки. По возрастанию'),
 
+            'template_key' => $this->string()->comment('Ссылка на шаблон для отрисовки данной единицы. Используем для переопределения шаблона.'),
+
             'content_id' => $this->bigInteger()->notNull(),
             'section_id' => $this->bigInteger()->comment('Id раздела в котором находится контент. Если NULL, то это раздел по умолчанию'),
 
@@ -551,6 +553,8 @@ class m200429_063615_content_tables extends Migration
             'id' => $this->bigPrimaryKey(),
             'site_id' => $this->bigInteger()->notNull(),
             'priority' => $this->integer()->defaultValue(100)->notNull()->comment('Поле для сортировки. По возрастанию'),
+
+            'template_key' => $this->string()->comment('Ссылка на шаблон для отрисовки данной единицы. Используем для переопределения шаблона.'),
 
             'content_id' => $this->bigInteger()->notNull()->comment('Страница'),
             'menu_id' => $this->bigInteger()->notNull()->comment('Cтраница где показываем контент.'),
