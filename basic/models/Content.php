@@ -5,6 +5,7 @@ namespace app\models;
 use Yii;
 use yii\caching\TagDependency;
 use app\components\ListContentBase;
+use yii\db\ActiveRecord;
 use yii\web\ServerErrorHttpException;
 
 /**
@@ -49,12 +50,19 @@ class Content extends BaseModel
         static::$_list[$id] = $obj;
     }
 
-    private static $_sel = 'c.id, c.priority, c.parent_id, c.path, c.model, c.content, c.template_key, c.content_keys_json, c.settings_json, t.type, t.template, t.settings_json as template_settings_json'; // нужны ли language_id section_id menu_id
+    public static $_sel = 'c.id, c.priority, c.parent_id, c.path, c.model, c.content, c.template_key, c.content_keys_json, c.settings_json, c.type, t.type as template_type, t.template, t.settings_json as template_settings_json'; // нужны ли language_id section_id menu_id
 
+    public static function addFiltersFromContentArgs(ActiveRecord &$query, &$content_args)
+    {
+        // todo
+        // ...
+
+        return $query;
+    }
     /**
      * @throws ServerErrorHttpException
      */
-    public static function getContentForList(&$site, &$lang, &$section, &$page, $listContent, $offset, $limit, $item = null)
+    public static function getContentForList(&$site, &$lang, &$section, &$page, $listContent, &$content_args, $offset, $limit, $item = null)
     {
         // в кеш не загоняем так как мы загоним в кеш все узлы контента для страницы
 
@@ -68,7 +76,7 @@ class Content extends BaseModel
                 throw new ServerErrorHttpException($mess);
             }
 
-            return static::$_list[$listContent['model']]->getContentForList($site, $lang, $section, $page, $listContent, $offset, $limit, $item);
+            return static::$_list[$listContent['model']]->getContentForList($site, $lang, $section, $page, $listContent, $content_args, $offset, $limit, $item);
         }
 
         $count = null;
@@ -104,8 +112,10 @@ class Content extends BaseModel
             $query = $query->andWhere(['c.section_id' => null]);
         }
 
-        if ($item === null)
+        if ($item === null) // сам список
         {
+            $query = static::addFiltersFromContentArgs($query, $content_args);
+
             // для начала вычислим коунт
             // при вычислении count можно похерить join для оптимизации! todo!
             $countRow = $query->select('count(*)')->asArray()->one();
@@ -123,7 +133,7 @@ class Content extends BaseModel
                 ->limit($limit)->offset($offset)
                 ->all();
         }
-        else
+        else // элемент списка
         {
             $query = $query->andWhere('c.page=:path', [':path' => $item]);
             $list = $query
@@ -223,7 +233,7 @@ class Content extends BaseModel
                             if (ctype_digit($content_args[0])) // не будем вводить лишних сущностей и слов в путь. если число то считаем его номеров страницы, если строка то это path единицы списка
                             {
                                 $offset = array_shift($content_args);
-                                list($_listDatas, $count) = static::getContentForList($site, $lang, $section, $page, $c, $offset * $limit, $limit);
+                                list($_listDatas, $count) = static::getContentForList($site, $lang, $section, $page, $c, $content_args, $offset * $limit, $limit);
                                 $listDatas += $_listDatas;
                                 $list[$k]['count'] = $count;
                                 $list[$k]['offset'] = $offset;
@@ -231,7 +241,7 @@ class Content extends BaseModel
                             else
                             {
                                 $item = array_shift($content_args);
-                                list($_listDatas, $count) = static::getContentForList($site, $lang, $section, $page, $c, null, null, $item);
+                                list($_listDatas, $count) = static::getContentForList($site, $lang, $section, $page, $c, $content_args, null, null, $item);
 
                                 // а вот тут мы должны заменить? сам список элементом - НЕТ.
                                 // здесь мы должны
@@ -255,7 +265,8 @@ class Content extends BaseModel
                         }
                         else // заполняем первую страницу
                         {
-                            list($_listDatas, $count) = static::getContentForList($site, $lang, $section, $page, $c, 0, $limit);
+                            $not_used_content_args = []; // так как передаем по ссылке, то сосздадим фэйковый пустой массив аргументов
+                            list($_listDatas, $count) = static::getContentForList($site, $lang, $section, $page, $c, $not_used_content_args, 0, $limit);
                             $listDatas += $_listDatas;
                             $list[$k]['count'] = $count;
                             $list[$k]['offset'] = 0;
