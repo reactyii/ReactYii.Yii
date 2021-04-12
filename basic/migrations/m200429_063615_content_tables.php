@@ -374,7 +374,7 @@ class m200429_063615_content_tables extends Migration
             $templ_news_list_id = $this->db->getLastInsertID();
 
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
-                'priority' => 10, 'key' => 'TestTable', 'name' => 'Шаблон таблица', 'template' => '<div class="conteiner"><div class="table">{{ROWS}}</div></div>'
+                'priority' => 10, 'key' => 'TestTable', 'name' => 'Шаблон таблица', 'template' => '<div class="container"><div class="table">{{ROWS}}</div></div>'
             ]);
             $templ_table_id = $this->db->getLastInsertID();
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
@@ -404,7 +404,9 @@ class m200429_063615_content_tables extends Migration
             'language_id' => $this->bigInteger()->comment('Для какого языка данная единица. Если NULL, то для всех языков'),
 
             // даже для примитивов сделаем шаблоны, например в некоторых шаблонах текст надо вставлять в div, а число форматировать по разному.
-            //'type' => $this->string(30)->notNull()->defaultValue('text')->comment('Тип единицы контента: list, text, string, block, image... Тип единицы однозначно определяет шаблон, но могут быть примитивы, например текст или число'),
+            // тип нужен! так как есть шаблоны React и для них нет записи в талице шаблонов
+            'type' => $this->string(30)->notNull()->defaultValue('text')
+                ->comment('Тип единицы контента: list, text, string, block, image... Тип единицы однозначно определяет шаблон, но могут быть примитивы, например текст или число'),
 
             // где показывать контент - много ко многим!
             'menu_id' => $this->bigInteger()->comment('Главная страница где размещен контент. Используется для оптимизации, чтобы сразу вытащить весь контент для страницы. Кроме списковых элементов (is_list_item=1).'),
@@ -457,13 +459,13 @@ class m200429_063615_content_tables extends Migration
         // --список контента
         $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
             'settings_json' => json_encode(['max_on_page' => '4']),
-            'model' => 'pages',
+            'model' => 'page', 'type'=>Template::TYPE_LIST,
             'priority' => 100600, 'template_key' => 'ListPages', 'menu_id'=>$menu_admin_pages_id, 'section_id' =>$admin_sect_id, 'name' => 'Страницы', 'content'=>''
         ]);
 
         $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
             'settings_json' => json_encode(['max_on_page' => '4']),
-            'model' => 'content',
+            'model' => 'content', 'type'=>Template::TYPE_LIST,
             'priority' => 100700, 'template_key' => 'ListContent', 'menu_id'=>$menu_admin_contents_id, 'section_id' =>$admin_sect_id, 'name' => 'Список контента', 'content'=>''
         ]);
 
