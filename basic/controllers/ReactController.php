@@ -124,7 +124,7 @@ class ReactController extends Controller
     {
         $result = [
             'status' => 200,
-            'content' => '',
+            'content' => '<noscript>You need to enable JavaScript to run this app.</noscript><div id="root"></div>',
             'header' => ''
         ];
 
@@ -132,6 +132,8 @@ class ReactController extends Controller
         {
             return $result;
         }
+
+        return $result; // на локале в режиме разработки иногда нужно вызвать страницу без ssr
 
         // check cache!
 
@@ -273,7 +275,7 @@ class ReactController extends Controller
         // решение на пустые части в пути (кроме строго единственного) будем кидать 404
         if (sizeof($parts) === 1 && $parts[0] === '') array_shift($parts);
 
-        Yii::info('=====> $parts[' . $path . ']=' . var_export($parts, true), __METHOD__);
+        //Yii::info('=====> $parts[' . $path . ']=' . var_export($parts, true), __METHOD__);
 
         // 2. начнем с резолва языка, если он есть, то он занимает первую часть пути
         if (sizeof($parts) > 0) { // первая часть пути вполне может быть языком
