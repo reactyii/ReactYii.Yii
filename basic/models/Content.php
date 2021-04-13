@@ -62,7 +62,7 @@ class Content extends BaseModel
     /**
      * @throws ServerErrorHttpException
      */
-    public static function getContentForList(&$site, &$lang, &$section, &$page, $listContent, &$content_args, $offset, $limit, $item = null, $recursion_level = null)
+    public static function getContentForList(&$site, &$lang, &$section, &$page, $listContent, &$content_args, $offset, $limit, $item = null, $recursion_level = 0)
     {
         // в кеш не загоняем так как мы загоним в кеш все узлы контента для страницы
 
@@ -136,7 +136,12 @@ class Content extends BaseModel
                 ->limit($limit)->offset($offset)
                 ->all();
 
-            static::json_decode($list, ['content_keys_json' => 'content_keys', 'settings_json' => 'settings', 'template_settings_json' => 'template_settings']);
+            static::json_decode_list($list, ['content_keys_json' => 'content_keys', 'settings_json' => 'settings', 'template_settings_json' => 'template_settings']);
+
+            foreach ($list as $k => $v)
+            {
+                $list[$k]['childs'] = static::getContentForPage($site, $lang, $section, $page, $content_args, $v['id'], $recursion_level + 1);
+            }
         }
         else // элемент списка
         {
@@ -149,6 +154,10 @@ class Content extends BaseModel
             // сразу проверим на существование
             if (!$list)
                 new \yii\web\NotFoundHttpException();
+
+            static::json_decode_item($list, ['content_keys_json' => 'content_keys', 'settings_json' => 'settings', 'template_settings_json' => 'template_settings']);
+
+            $list['childs'] = static::getContentForPage($site, $lang, $section, $page, $content_args, $list['id'], $recursion_level + 1);
         }
 
         return [$list, $count];
@@ -240,7 +249,7 @@ class Content extends BaseModel
             // Yii::info("getContentForPage. ----------------------------------- request to db end " . $key, __METHOD__);
 
             // todo надо как-то смержить настройки самого элемента и настройки шаблона, я так думаю берем за основу настройки элемента и дополняем из шаблона отсутствующие
-            static::json_decode($list, ['content_keys_json' => 'content_keys', 'settings_json' => 'settings', 'template_settings_json' => 'template_settings']);
+            static::json_decode_list($list, ['content_keys_json' => 'content_keys', 'settings_json' => 'settings', 'template_settings_json' => 'template_settings']);
 
             // а вот после загрузки основного контента мы сделаем подгрузку элементов списка с учетом пагинации или детальной инфы
             if ($list) // если хоть что-то есть в списке

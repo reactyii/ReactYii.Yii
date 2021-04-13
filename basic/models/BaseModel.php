@@ -152,19 +152,21 @@ abstract class BaseModel extends \yii\db\ActiveRecord
      * Десериализуем жсоны в списке
      *
     */
-    public static function json_decode(&$list, $fields, $remove_source = true, $depth = 512, $options = 0) {
-        array_walk($list, function(&$row) use ($fields, $remove_source, $depth, $options) {
-            foreach ($fields as $k => $v) {
-                if ($row[$k]) {
-                    $row[$v] = json_decode($row[$k], true, $depth, $options);
-                }
-                // нулы не будем делать. пока не вижу особой разницы делать проверку на нулл или undefined
-                /*else {
-                    $row[$v] = null;
-                }*/
-                if ($remove_source) unset ($row[$k]);
-            }
+    public static function json_decode_list(&$list, $fields, $remove_source = true, $depth = 512, $options = 0) {
+        array_walk($list, function(&$item) use ($fields, $remove_source, $depth, $options) {
+            static::json_decode_item($item, $fields, $remove_source, $depth, $options);
         });
     }
-
+    public static function json_decode_item(&$item, $fields, $remove_source = true, $depth = 512, $options = 0) {
+        foreach ($fields as $k => $v) {
+            if ($item[$k]) {
+                $item[$v] = json_decode($item[$k], true, $depth, $options);
+            }
+            // нулы не будем делать. пока не вижу особой разницы делать проверку на нулл или undefined
+            /*else {
+                $row[$v] = null;
+            }*/
+            if ($remove_source) unset ($item[$k]);
+        }
+    }
 }
