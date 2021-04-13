@@ -23,5 +23,5 @@ abstract class ListContentBase extends BaseObject
         Content::registerContentList($this->id, $this);
     }
 
-    abstract function getContentForList(&$site, &$lang, &$section, &$page, $listContent, &$content_args, $offset, $limit, $item = null);
+    abstract function getContentForList(&$site, &$lang, &$section, &$page, $listContent, &$content_args, $offset, $limit, $item = null, $recursion_level = 0);
 }

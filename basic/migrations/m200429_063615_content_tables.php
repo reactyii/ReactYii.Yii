@@ -460,12 +460,14 @@ class m200429_063615_content_tables extends Migration
         $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
             'settings_json' => json_encode(['max_on_page' => '4']),
             'model' => 'page', 'type'=>Template::TYPE_LIST,
+            'path' => 'pageslist',
             'priority' => 100600, 'template_key' => 'ListPages', 'menu_id'=>$menu_admin_pages_id, 'section_id' =>$admin_sect_id, 'name' => 'Страницы', 'content'=>''
         ]);
 
         $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
             'settings_json' => json_encode(['max_on_page' => '4']),
             'model' => 'content', 'type'=>Template::TYPE_LIST,
+            'path' => 'contentslist',
             'priority' => 100700, 'template_key' => 'ListContent', 'menu_id'=>$menu_admin_contents_id, 'section_id' =>$admin_sect_id, 'name' => 'Список контента', 'content'=>''
         ]);
 

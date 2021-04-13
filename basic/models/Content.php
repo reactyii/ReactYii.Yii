@@ -62,9 +62,12 @@ class Content extends BaseModel
     /**
      * @throws ServerErrorHttpException
      */
-    public static function getContentForList(&$site, &$lang, &$section, &$page, $listContent, &$content_args, $offset, $limit, $item = null)
+    public static function getContentForList(&$site, &$lang, &$section, &$page, $listContent, &$content_args, $offset, $limit, $item = null, $recursion_level = null)
     {
         // в кеш не загоняем так как мы загоним в кеш все узлы контента для страницы
+
+        // сильно выпадать по ошибке не будем, ибо что-то мы сможем показать юзеру более менее корректно. но результат нужно вернуть корерктный!
+        if (!static::checkRecursionLevel($recursion_level)) return [[], null];
 
         // пробуем найти обработчки списка
         if (isset($listContent['model']) && $listContent['model']) // список по модели
@@ -76,7 +79,7 @@ class Content extends BaseModel
                 throw new ServerErrorHttpException($mess);
             }
 
-            return static::$_list[$listContent['model']]->getContentForList($site, $lang, $section, $page, $listContent, $content_args, $offset, $limit, $item);
+            return static::$_list[$listContent['model']]->getContentForList($site, $lang, $section, $page, $listContent, $content_args, $offset, $limit, $item, $recursion_level);
         }
 
         $count = null;
@@ -132,6 +135,8 @@ class Content extends BaseModel
                 ->asArray()
                 ->limit($limit)->offset($offset)
                 ->all();
+
+            static::json_decode($list, ['content_keys_json' => 'content_keys', 'settings_json' => 'settings', 'template_settings_json' => 'template_settings']);
         }
         else // элемент списка
         {
@@ -140,30 +145,58 @@ class Content extends BaseModel
                 ->select('c.*, t.type, t.settings_json as template_settings_json') // при вытаскивании поштучно нам нужны уже все данные
                 ->asArray()
                 ->one();
+
+            // сразу проверим на существование
+            if (!$list)
+                new \yii\web\NotFoundHttpException();
         }
 
         return [$list, $count];
+    }
+
+    protected static $_max_recursion = 30;
+
+    protected static function checkRecursionLevel($recursion_level)
+    {
+        if ($recursion_level > static::$_max_recursion)
+        {
+            Yii::error("\n----------------------------\nReaching the maximum number of recursion = " . $recursion_level . "\n----------------------------\n", __METHOD__);
+            // todo отчет админу бы формировать? но может быть напишем в событие приложения
+            return false;
+        }
+        return true;
+    }
+
+    public static function getContentSetting($contentItem, $propName, $defValue)
+    {
+        $res = $defValue;
+        if (isset($contentItem['template_settings'][$propName])) $res = $contentItem['template_settings'][$propName];
+        if (isset($contentItem['settings'][$propName])) $res = $contentItem['settings'][$propName];
+        return $res;
     }
 
     /**
      * Готовим список единиц контента для страницы.
      *
      */
-    public static function getContentForPage(&$site, &$lang, &$section, &$page, &$content_args)
+    public static function getContentForPage(&$site, &$lang, &$section, &$page, &$content_args, $parent_id = null, $recursion_level = 0)
     {
+        // сильно выпадать по ошибке не будем, ибо что-то мы сможем показать юзеру более менее корректно
+        if (!static::checkRecursionLevel($recursion_level)) return [];
+
         $key = implode('-', [
             $site != null ? $site['id'] : '',
             $lang ? $lang['id'] : '',
             $section ? $section['id'] : '',
             $page['id'],
-            //$parent_id != null ? $parent_id : '',
+            $parent_id != null ? $parent_id : '',
             implode('_', $content_args),
             static::getCacheBaseKey(),
             __FUNCTION__
         ]);
         Yii::info("getContentForPage. key=" . $key, __METHOD__);
 
-        $contentList = Yii::$app->cache->getOrSet($key, function () use ($key, $site, $lang, $page, $section, $content_args) {
+        $contentList = Yii::$app->cache->getOrSet($key, function () use ($key, $site, $lang, $page, $section, $content_args, $parent_id, $recursion_level) {
             Yii::info("getContentForPage. get from DB key=" . $key, __METHOD__);
 
             $query = self::find()
@@ -178,7 +211,7 @@ class Content extends BaseModel
                 ->join('LEFT JOIN', Template::tableName() . ' t' ,  'c.template_key = t.key')
                 ->where([
                     'c.site_id' => $site['id'],
-                    //'c.parent_id' => $parent_id,
+                    'c.parent_id' => $parent_id,
                 ]);
 
             $query = $query->andWhere('c.menu_id=:menuid or c.is_all_menu=1', [':menuid' => $page['id']])
@@ -186,7 +219,8 @@ class Content extends BaseModel
                 ->andWhere(['c.language_id' => null]);// NB! делаем поиск строго для языка по умолчанию (пеервод будем делать позднее, его может тупо не быть для какого-то промежуточного узла)
 
             // NB! нам надо запретить подгрузку элементов списка! так как данных там может быть много и нам надо делать загрузку списка с учетом пагинации
-            $query = $query->andWhere('is_list_item=0');
+            // убираем сей флаг. все равно нам нужна рекурсия
+            //$query = $query->andWhere('is_list_item=0');
 
             if ($section)
             {
@@ -205,20 +239,20 @@ class Content extends BaseModel
             ->all();
             // Yii::info("getContentForPage. ----------------------------------- request to db end " . $key, __METHOD__);
 
-            // надо как то смержить настройки самого элемента и настройки шаблона, я так думаю берем за основу настройки элемента и дополняем из шаблона отсутствующие
+            // todo надо как-то смержить настройки самого элемента и настройки шаблона, я так думаю берем за основу настройки элемента и дополняем из шаблона отсутствующие
             static::json_decode($list, ['content_keys_json' => 'content_keys', 'settings_json' => 'settings', 'template_settings_json' => 'template_settings']);
 
             // а вот после загрузки основного контента мы сделаем подгрузку элементов списка с учетом пагинации или детальной инфы
             if ($list) // если хоть что-то есть в списке
             {
-                $listDatas = []; // сюда будем догружать контенты для списков
-                $forRemove = [];
-                foreach ($list as $k=>$c)
+                //$listDatas = []; // сюда будем догружать контенты для списков
+                //$forRemove = [];
+                foreach ($list as $k => $c)
                 {
                     // если тип контента это список, то в $content_args у нас могут быть переданы параметры типа номер текущей страницы или имя конкретного элемента
                     if ($c['type'] === Template::TYPE_LIST) // $c['type'] это тип шаблона
                     {
-                        $limit = 10; // число итемов на странице берем из настроек контента и если там нет, то шаблона
+                        $limit = static::getContentSetting($c, 'max_on_page', 10); // число итемов на странице берем из настроек контента и если там нет, то шаблона
 
                         // так как списков на странице может быть несколько, то надо проверить, а может юзер пошел по именнно по этому списку. если нет то показываем первую страницу спсика
                         if (sizeof($content_args) > 0 && $content_args[0] === $c['path']) // наш список
@@ -234,24 +268,28 @@ class Content extends BaseModel
                             {
                                 $offset = array_shift($content_args);
                                 list($_listDatas, $count) = static::getContentForList($site, $lang, $section, $page, $c, $content_args, $offset * $limit, $limit);
-                                $listDatas += $_listDatas;
-                                $list[$k]['count'] = $count;
-                                $list[$k]['offset'] = $offset;
+                                //$listDatas += $_listDatas;
+                                $list[$k]['childs'] = $_listDatas;
+                                $list[$k]['settings']['max_on_page'] = $limit;
+                                $list[$k]['settings']['count'] = $count;
+                                $list[$k]['settings']['offset'] = $offset;
                             }
                             else
                             {
                                 $item = array_shift($content_args);
-                                list($_listDatas, $count) = static::getContentForList($site, $lang, $section, $page, $c, $content_args, null, null, $item);
+                                list($_listItem, $count) = static::getContentForList($site, $lang, $section, $page, $c, $content_args, null, null, $item, $recursion_level + 1);
 
                                 // а вот тут мы должны заменить? сам список элементом - НЕТ.
                                 // здесь мы должны
                                 // 1. убрать список из контента
-                                $forRemove[] = $k; // индекс
+                                //$forRemove[] = $k; // индекс
                                 // 2. поместить контент элемента на самый верхний уровень (в корень)
+                                $list[$k] = $_listItem;
 
                                 // и переписать SEO и заголовок страницы h1 хлебные крошки
+                                // todo SEO for list item
 
-                                Yii::error("getContentForPage. not implemented yet", __METHOD__);
+                                //Yii::error("getContentForPage. not implemented yet", __METHOD__);
                             }
 
                             // нельзя прерывать break; так как мы должны заполнить другие списки по крайней мере перовой страницей
@@ -266,22 +304,28 @@ class Content extends BaseModel
                         else // заполняем первую страницу
                         {
                             $not_used_content_args = []; // так как передаем по ссылке, то сосздадим фэйковый пустой массив аргументов
-                            list($_listDatas, $count) = static::getContentForList($site, $lang, $section, $page, $c, $not_used_content_args, 0, $limit);
-                            $listDatas += $_listDatas;
-                            $list[$k]['count'] = $count;
-                            $list[$k]['offset'] = 0;
+                            list($_listDatas, $count) = static::getContentForList($site, $lang, $section, $page, $c, $not_used_content_args, 0, $limit, null, $recursion_level + 1);
+                            //$listDatas += $_listDatas;
+                            $list[$k]['childs'] = $_listDatas;
+                            $list[$k]['settings']['max_on_page'] = $limit;
+                            $list[$k]['settings']['count'] = $count;
+                            $list[$k]['settings']['offset'] = 0;
                         }
                     }
-                    //$contentList[$k]['childs'] = static::getContentForPage($site, $lang, $section, $page, $content_args, $c['id'], $recursion_level + 1);
+                    else
+                    {
+                        $list[$k]['childs'] = static::getContentForPage($site, $lang, $section, $page, $content_args, $c['id'], $recursion_level + 1);
+                    }
                 }
 
                 // а вот после прохождения всего списка у нас должен быть абсолютно пустой $content_args и если это не так, то мы должны выдать 404, чтоб поисковики не ползали там где не надо
                 if (sizeof($content_args) > 0)
                 {
+                    Yii::error("getContentForPage. !-!-!-!-!-!-!-!-!-!-!-!-!-", __METHOD__);
                     throw new \yii\web\NotFoundHttpException();
                 }
 
-                if (sizeof($forRemove) > 0)
+                /*if (sizeof($forRemove) > 0)
                 {
                     // обязательно учесть что елси удаляемых больше 1, то все след после первого надо уменьшать на -1 затем на -2 и тд или удалять начиная с конца!
                     $forRemove = array_reverse($forRemove);
@@ -291,20 +335,20 @@ class Content extends BaseModel
                     }
 
                     Yii::error("getContentForPage. not implemented yet", __METHOD__);
-                }
+                }*/
 
-                $list += $listDatas; // позже мы сварганим корректное дерево
+                //$list += $listDatas; // позже мы сварганим корректное дерево
             }
 
 
-
+            return $list;
             //Yii::info("getContentForPage. source list=" . var_export($list, true), __METHOD__);
 
-            $list = static::listToHash($list);
+            //$list = static::listToHash($list);
 
             //Yii::info("getContentForPage. hash=" . var_export($list, true), __METHOD__);
 
-            return static::hashToTree($list);
+            //return static::hashToTree($list);
         }, null, new TagDependency([
             'tags' => [
                 'site-' . $site['id'],

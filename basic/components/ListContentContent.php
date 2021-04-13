@@ -44,7 +44,7 @@ class ListContentContent extends ListContentBase
     /**
      * @throws yii\web\NotFoundHttpException
      */
-    function getContentForList(&$site, &$lang, &$section, &$page, $listContent, &$content_args, $offset, $limit, $item = null)
+    function getContentForList(&$site, &$lang, &$section, &$page, $listContent, &$content_args, $offset, $limit, $item = null, $recursion_level = 0)
     {
         //Yii::info('!!!-----------!!!!!!!!!', __METHOD__);
         //return [[], 0];
@@ -97,7 +97,7 @@ class ListContentContent extends ListContentBase
             if ($offset > $count)
                 new \yii\web\NotFoundHttpException();
 
-            $list = $query->select(Content::$_sel)->orderBy([
+            $list = $query->select(Content::$_sel . ', c.name')->orderBy([
                 'c.priority' => SORT_ASC,
                 'c.id' => SORT_ASC
             ])
@@ -105,11 +105,20 @@ class ListContentContent extends ListContentBase
                 ->limit($limit)->offset($offset)
                 ->all();
 
+            Content::json_decode($list, ['content_keys_json' => 'content_keys', 'settings_json' => 'settings', 'template_settings_json' => 'template_settings']);
+
             // меняем парента. так как модель строит списки по БД и создает элементы контента как бы исскуственно.
             // в данной модели нам надо тока поменять парента в других мы будем создавать элементы полностью
             foreach ($list as $k => $v)
             {
-                $list[$k]['parent_id'] = $listContent['id'];
+                // не меняем парента! теперь мы идем рекурсией
+                //$list[$k]['parent_id'] = $listContent['id'];
+
+                // а вот поменять "content_keys" надо. причем сохранив исодный вариант
+                $list[$k]['settings']['content_keys'] = isset($v['content_keys']) && $v['content_keys'] ? json_encode($v['content_keys']) : [];
+                $list[$k]['content_keys'] = ['CONTENT'];
+
+                $list[$k]['settings']['name'] = $v['name']; // нужно для формирования удобочитаемого списка
             }
 
         }
