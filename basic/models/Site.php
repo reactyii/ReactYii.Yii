@@ -69,7 +69,7 @@ class Site extends BaseModel
             // 1. разделы и менюшки надо переводить 2. не всегда нужны все записи (тока не скрытые) и все колонки таблицы (оптимизируем сразу)
             //$site['sections'] = Section::getAll($site);
             //$site['menus'] = Menu::getAll($site);
-            $site['sections'] = Section::getFilteredTree($site, ['is_blocked' => 0]);
+            $site['sections'] = Section::getFiltered($site, ['is_blocked' => 0]);
 
             $site['lastModified'] = time(); // сохраним время генерации данных (пока не будем использовать updated_at из таблицы)
 

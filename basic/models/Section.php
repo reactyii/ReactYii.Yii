@@ -45,7 +45,7 @@ class Section extends BaseModel
      * Готовим дерево меню для сайта
      *
      */
-    public static function getFilteredTree(&$site, $filter = [])
+    public static function getFiltered(&$site, $filter = [])
     {
         $_key = [
             $site != null ? $site['id'] : '',
@@ -77,17 +77,18 @@ class Section extends BaseModel
                 ->asArray()
                 ->all();
 
+            return $list;
             //static::json_decode_list($list, ['content_keys_json' => 'content_keys']);
 
             // тут переводить нечего
 
             //Yii::info("getContentForPage. source list=" . var_export($list, true), __METHOD__);
 
-            $list = static::listToHash($list);
+            //$list = static::listToHash($list);
 
             //Yii::info("getContentForPage. hash=" . var_export($list, true), __METHOD__);
 
-            return static::hashToTree($list);
+            //return static::hashToTree($list);
         }, null, new TagDependency([
             'tags' => [
                 'site-' . $site['id'],
