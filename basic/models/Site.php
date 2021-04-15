@@ -31,6 +31,16 @@ use yii\caching\TagDependency;
 class Site extends BaseModel
 {
 
+    // https://stackoverflow.com/questions/834303/startswith-and-endswith-functions-in-php
+    // пока кинем сюда
+    static function endsWith( $haystack, $needle ) {
+        $length = strlen( $needle );
+        if( !$length ) {
+            return true;
+        }
+        return substr( $haystack, -$length ) === $needle;
+    }
+
     public static function getSite($host)
     {
         $key = implode('-', [
@@ -48,7 +58,7 @@ class Site extends BaseModel
             $site = $sites[0];
             if (sizeof($sites) > 1) {
                 foreach ($sites as $s) {
-                    if (str_ends_with($host, $s['main_host'])) {
+                    if (static::endsWith($host, $s['main_host'])) {
                         $site = $s;
                         break;
                     }
@@ -56,8 +66,10 @@ class Site extends BaseModel
             }
             // догружаем меню разделы, языки, менюшки
             $site['langs'] = Language::getAll($site);
-            $site['sections'] = Section::getAll($site);
-            $site['menus'] = Menu::getAll($site);
+            // 1. разделы и менюшки надо переводить 2. не всегда нужны все записи (тока не скрытые) и все колонки таблицы (оптимизируем сразу)
+            //$site['sections'] = Section::getAll($site);
+            //$site['menus'] = Menu::getAll($site);
+            $site['sections'] = Section::getFilteredTree($site, ['is_blocked' => 0]);
 
             $site['lastModified'] = time(); // сохраним время генерации данных (пока не будем использовать updated_at из таблицы)
 

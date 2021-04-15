@@ -148,7 +148,8 @@ class m200429_063615_content_tables extends Migration
             'parent_id' => $this->bigInteger()/*->notNull()->defaultValue(-1)*/->comment('Cразу для реализации дерева разделов. Иногда тут могут быть регионы и города.'),
 
             'name' => $this->string(1024)->notNull(), // это значение исключительно для админа, так как h1 будем всегда брать со страницы
-            'menu_name' => $this->string(255), // если  = NULL, то будем брать со страницы
+            // всегда со страницы
+            //'menu_name' => $this->string(255), // если  = NULL, то будем брать со страницы
 
             'template_layout' => $this->string()->comment('Шаблон для "макета" по умолчанию. Каждая страница в свою очередь может преопределить'),
             'template_page' => $this->string()->comment('Шаблон для всех страниц раздела по умолчанию. Каждая страница в свою очередь может преопределить'),
@@ -222,11 +223,15 @@ class m200429_063615_content_tables extends Migration
             'name' => $this->string(1024)->notNull()->defaultValue('')->comment('H1 страницы. Может быть пустая строка.'),
             'menu_name' => $this->string(255)->notNull()->defaultValue('')->comment('Название страницы в меню. Здесь не может быть пустой строки.'),
 
+            'layout' => $this->string(255)->defaultValue(null)->comment('Шаблон страницы. Если null, то Layout.'),
+
             'path' => $this->string()->comment('Путь для кодирования в урл. Если не NULL, то в меню отображается именно эта страница'), // тут может быть нул!
             'menu_id'  => $this->bigInteger()->comment('Линк на внутренню страницу. Если path is NULL, то в меню вставляем линк на внутренню страницу'),
             'url'  => $this->string(1024)->comment('Внешний URL. Если path is NULL and page_id is NULL, то в меню вставляем внешний линк и target="_blank"'),
 
             'search_words' => $this->text()->comment('Слова для поиска. При сохранении страницы здесь формируем список слов для поиска.'),
+
+            // НЕ уберем это. сделаем вставку через контент. там будет тип меню. Чтобы не делать лишнию запись в таблице контента создадим ее сами из менюшек
             'content_keys_json' => $this->text()->comment('Список ключей для вставки в шаблон (TOP_MENU,FOOTER_MENU,LEFT_MENU). Каждый пункт меню может располагаться в нескольких местах на странице (верхнее, нижнее и боковое меню).'),
 
             'seo_title' => $this->text()->comment('SEO Title'),

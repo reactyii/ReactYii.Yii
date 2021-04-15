@@ -41,6 +41,63 @@ class Section extends BaseModel
         return Section::getItemByField($site, ['path=:path', 'is_blocked=0'], [':path' => $path], 'path=' . $path . ',is_blocked=0');
     }
 
+    /**
+     * Готовим дерево меню для сайта
+     *
+     */
+    public static function getFilteredTree(&$site, $filter = [])
+    {
+        $_key = [
+            $site != null ? $site['id'] : '',
+            // пока преводить нечего
+            //$lang ? $lang['id'] : '',
+        ];
+        foreach ($filter as $k => $v)
+        {
+            $_key[] = $k . '=' . $v;
+        }
+        $_key[] = static::getCacheBaseKey();
+        $_key[] = __FUNCTION__;
+        $key = implode('-', $_key);
+        Yii::info("getFilteredTree. key=" . $key, __METHOD__);
+
+        $menu = Yii::$app->cache->getOrSet($key, function () use ($key, $site, $filter) {
+            Yii::info("getFilteredTree. get from DB key=" . $key, __METHOD__);
+            $filter['site_id'] = $site['id'];
+
+            $query = self::find()
+                ->select('id, path, host, parent_id, name')
+                ->from(static::tablename())
+                ->where($filter);
+
+            $list = $query->orderBy([
+                'priority' => SORT_ASC,
+                'id' => SORT_ASC
+            ])
+                ->asArray()
+                ->all();
+
+            //static::json_decode_list($list, ['content_keys_json' => 'content_keys']);
+
+            // тут переводить нечего
+
+            //Yii::info("getContentForPage. source list=" . var_export($list, true), __METHOD__);
+
+            $list = static::listToHash($list);
+
+            //Yii::info("getContentForPage. hash=" . var_export($list, true), __METHOD__);
+
+            return static::hashToTree($list);
+        }, null, new TagDependency([
+            'tags' => [
+                'site-' . $site['id'],
+                static::getCacheBaseKey() . '-' . $site['id'],
+            ]
+        ]));
+
+        return $menu;
+    }
+
     // -------------------------------------------- auto generated -------------------------
 
     /**

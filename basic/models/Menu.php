@@ -71,6 +71,63 @@ class Menu extends BaseModel
     }/**/
 
     /**
+     * Готовим дерево меню для сайта
+     *
+     */
+    public static function getFilteredTree(&$site, &$lang, $filter = [])
+    {
+        $_key = [
+            $site != null ? $site['id'] : '',
+            $lang ? $lang['id'] : '',
+        ];
+        foreach ($filter as $k => $v)
+        {
+            $_key[] = $k . '=' . $v;
+        }
+        $_key[] = static::getCacheBaseKey();
+        $_key[] = __FUNCTION__;
+        $key = implode('-', $_key);
+        Yii::info("getFilteredTree. key=" . $key, __METHOD__);
+
+        $menu = Yii::$app->cache->getOrSet($key, function () use ($key, $site, $lang, $filter) {
+            Yii::info("getFilteredTree. get from DB key=" . $key, __METHOD__);
+            $filter['site_id'] = $site['id'];
+
+            $query = self::find()
+                ->select('id, path, parent_id, name, menu_name, is_all_section, is_current_section, section_id, content_keys_json')
+                ->from(static::tablename())
+                ->where($filter);
+
+            $list = $query->orderBy([
+                'priority' => SORT_ASC,
+                'id' => SORT_ASC
+            ])
+                ->asArray()
+                ->all();
+
+            static::json_decode_list($list, ['content_keys_json' => 'content_keys']);
+
+            // todo перевод !!! возможно сделаем таблицу связи (many to many) menu_translates и там будем хранить ссылки на переводы из таболицы контента или сделаем таблицу translates как в 2garin.com
+            // или просто будем в талицу контента делать записи (возможно добавим туда признак что это перевод названия пункта меню и SEO которое и так есть в контенте)
+
+            //Yii::info("getContentForPage. source list=" . var_export($list, true), __METHOD__);
+
+            $list = static::listToHash($list);
+
+            //Yii::info("getContentForPage. hash=" . var_export($list, true), __METHOD__);
+
+            return static::hashToTree($list);
+        }, null, new TagDependency([
+            'tags' => [
+                'site-' . $site['id'],
+                static::getCacheBaseKey() . '-' . $site['id'],
+            ]
+        ]));
+
+        return $menu;
+    }
+
+    /**
      * Делаем поиск страницы с по урлу с учетом раздела
      *
      */

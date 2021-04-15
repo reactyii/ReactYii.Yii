@@ -99,6 +99,7 @@ abstract class BaseModel extends \yii\db\ActiveRecord
 
     /**
      * Преобразуем список в ассоциативный массив по ключу (обычно по id)
+     * Новый массив возвращаем. Исходный не меняем (передаем по ссылке для оптимизации)!
      *
      */
     public static function listToHash(&$list, $keyName = 'id')

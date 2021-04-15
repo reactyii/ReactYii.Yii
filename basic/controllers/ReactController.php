@@ -59,6 +59,8 @@ class ReactController extends Controller
         if ($request->isAjax) {
 
             list ($lang, $section, $page, $content) = $this->parsePath($site, $path);
+            //$site['sections'] = Section::getFilteredTree($site, $lang, ['is_blocked' => 0]);
+            $site['menus'] = Menu::getFilteredTree($site, $lang, ['is_blocked' => 0]);
 
             // sleep(3); // отладка
             Yii::info('prepare json data for page', __METHOD__);
@@ -322,7 +324,7 @@ class ReactController extends Controller
 
         // еще надо заполнить контентом
         $content = Content::getContentForPage($site, $lang, $section, $page, $parts);
-        Yii::info('=====> $content[' . $path . ']=' . var_export($content, true), __METHOD__);
+        //Yii::info('=====> $content[' . $path . ']=' . var_export($content, true), __METHOD__);
 
         return [
             $lang,
