@@ -59,8 +59,10 @@ class Content extends BaseModel
 
         return $query;
     }
+
     /**
      * @throws ServerErrorHttpException
+     * @throws \yii\web\NotFoundHttpException
      */
     public static function getContentForList(&$site, &$lang, &$section, &$page, $listContent, &$content_args, $offset, $limit, $item = null, $recursion_level = 0)
     {
@@ -126,7 +128,7 @@ class Content extends BaseModel
 
             // может редирект сделать на первую страницу? но для SEO важнее 404
             if ($offset > $count)
-                new \yii\web\NotFoundHttpException();
+                throw new \yii\web\NotFoundHttpException();
 
             $list = $query->select(static::$_sel)->orderBy([
                 'c.priority' => SORT_ASC,
@@ -261,7 +263,8 @@ class Content extends BaseModel
                     // если тип контента это список, то в $content_args у нас могут быть переданы параметры типа номер текущей страницы или имя конкретного элемента
                     if ($c['type'] === Template::TYPE_LIST) // $c['type'] это тип шаблона
                     {
-                        $limit = static::getContentSetting($c, 'max_on_page', 10); // число итемов на странице берем из настроек контента и если там нет, то шаблона
+                        $list[$k]['settings']['list_path'] = $c['path']; // для формирования пагинатора
+                        $per_page = static::getContentSetting($c, 'per_page', 10); // число итемов на странице берем из настроек контента и если там нет, то шаблона
 
                         // так как списков на странице может быть несколько, то надо проверить, а может юзер пошел по именнно по этому списку. если нет то показываем первую страницу спсика
                         if (sizeof($content_args) > 0 && $content_args[0] === $c['path']) // наш список
@@ -275,18 +278,18 @@ class Content extends BaseModel
 
                             if (ctype_digit($content_args[0])) // не будем вводить лишних сущностей и слов в путь. если число то считаем его номеров страницы, если строка то это path единицы списка
                             {
-                                $offset = array_shift($content_args);
-                                list($_listDatas, $count) = static::getContentForList($site, $lang, $section, $page, $c, $content_args, $offset * $limit, $limit);
+                                $cur_page = array_shift($content_args);
+                                list($_listDatas, $total_rows) = static::getContentForList($site, $lang, $section, $page, $c, $content_args, $cur_page * $per_page, $per_page);
                                 //$listDatas += $_listDatas;
                                 $list[$k]['childs'] = $_listDatas;
-                                $list[$k]['settings']['max_on_page'] = $limit;
-                                $list[$k]['settings']['count'] = $count;
-                                $list[$k]['settings']['offset'] = $offset;
+                                $list[$k]['settings']['per_page'] = $per_page;
+                                $list[$k]['settings']['total_rows'] = $total_rows;
+                                $list[$k]['settings']['cur_page'] = $cur_page;
                             }
                             else
                             {
                                 $item = array_shift($content_args);
-                                list($_listItem, $count) = static::getContentForList($site, $lang, $section, $page, $c, $content_args, null, null, $item, $recursion_level + 1);
+                                list($_listItem, $total_rows) = static::getContentForList($site, $lang, $section, $page, $c, $content_args, null, null, $item, $recursion_level + 1);
 
                                 // а вот тут мы должны заменить? сам список элементом - НЕТ.
                                 // здесь мы должны
@@ -313,12 +316,12 @@ class Content extends BaseModel
                         else // заполняем первую страницу
                         {
                             $not_used_content_args = []; // так как передаем по ссылке, то сосздадим фэйковый пустой массив аргументов
-                            list($_listDatas, $count) = static::getContentForList($site, $lang, $section, $page, $c, $not_used_content_args, 0, $limit, null, $recursion_level + 1);
+                            list($_listDatas, $total_rows) = static::getContentForList($site, $lang, $section, $page, $c, $not_used_content_args, 0, $per_page, null, $recursion_level + 1);
                             //$listDatas += $_listDatas;
                             $list[$k]['childs'] = $_listDatas;
-                            $list[$k]['settings']['max_on_page'] = $limit;
-                            $list[$k]['settings']['count'] = $count;
-                            $list[$k]['settings']['offset'] = 0;
+                            $list[$k]['settings']['per_page'] = $per_page;
+                            $list[$k]['settings']['total_rows'] = $total_rows;
+                            $list[$k]['settings']['cur_page'] = 0;
                         }
                     }
                     else

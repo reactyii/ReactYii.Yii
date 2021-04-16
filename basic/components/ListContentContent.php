@@ -64,24 +64,6 @@ class ListContentContent extends ListContentBase
                 //'c.parent_id' => $parent_id,
             ]);
 
-        // разделы языки страницы идут фильтрами, парент тоже?
-        /*$query = $query->andWhere('c.menu_id=:menuid or c.is_all_menu=1', [':menuid' => $page['id']])
-            ->andWhere('c.is_blocked=0')
-            ->andWhere(['c.language_id' => null]);// NB! делаем поиск строго для языка по умолчанию (пеервод будем делать позднее, его может тупо не быть для какого-то промежуточного узла)
-
-        // NB! нам надо запретить подгрузку элементов списка! так как данных там может быть много и нам надо делать загрузку списка с учетом пагинации
-        //$query = $query->andWhere('is_list_item=0');
-        $query = $query->andWhere('parent_id=:parent', [':parent' => $listContent['id']]);
-
-        if ($section)
-        {
-            $query = $query->andWhere('c.section_id=:sectionid or c.is_all_section=1', [':sectionid' => $section['id']]);
-        }
-        else
-        {
-            $query = $query->andWhere(['c.section_id' => null]);
-        }*/
-
         if ($item === null) // сам список
         {
             // здесь именно "static::"
@@ -89,16 +71,18 @@ class ListContentContent extends ListContentBase
 
             // для начала вычислим коунт
             // при вычислении count можно похерить join для оптимизации! todo!
-            $countRow = $query->select('count(*) as `count`')->asArray()->one();
+            $countRow = $query->select('count(*) as `total_rows`')->asArray()->one();
             //Yii::info('-----------' . var_export($countRow, true), __METHOD__);
-            $count = $countRow['count'];
+            $count = $countRow['total_rows'];
+
+            Yii::info('-----------$count=' . $count . '; $offset=' . $offset, __METHOD__);
 
             // может редирект сделать на первую страницу? но для SEO важнее 404
             if ($offset > $count)
-                new \yii\web\NotFoundHttpException();
+                throw new \yii\web\NotFoundHttpException();
 
             $list = $query->select(Content::$_sel . ', c.name')->orderBy([
-                'c.priority' => SORT_ASC,
+                //'c.priority' => SORT_ASC,
                 'c.id' => SORT_ASC
             ])
                 ->asArray()
