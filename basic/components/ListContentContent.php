@@ -33,7 +33,29 @@ class ListContentContent extends ListContentBase
         Content::registerContentList();
     }/**/
 
-    public static function addFiltersFromContentArgs(&$query, &$content_args)
+    public function getContentForListFilter(&$site, &$lang, &$section, &$page, $listContent, &$content_args)
+    {
+        return [
+            [
+                'content' => '',
+                'id' => $listContent['id'],
+                'template_key' => 'FormFilterContent',
+                'type' => 'form',
+                //'model' => 'content', // ссылка на самих себя
+                'path' => $listContent['path'], //'contentslist', // для формирования action
+                'settings' => ['method' => 'get'],
+                'content_keys' => ['FILTER'],
+                'childs' => [
+                    [
+                        'content' => 'filter content',
+                        'childs' => [],
+                    ],
+                ],
+            ],
+        ];
+    }
+
+    public function addFiltersFromContentArgs(&$query, &$content_args)
     {
         // todo
         // ...
@@ -67,15 +89,15 @@ class ListContentContent extends ListContentBase
         if ($item === null) // сам список
         {
             // здесь именно "static::"
-            $query = static::addFiltersFromContentArgs($query, $content_args);
+            $query = $this->addFiltersFromContentArgs($query, $content_args);
 
-            // для начала вычислим коунт
-            // при вычислении count можно похерить join для оптимизации! todo!
+            // для начала вычислим total_rows
+            // при вычислении count можно похерить left join для оптимизации! todo!
             $countRow = $query->select('count(*) as `total_rows`')->asArray()->one();
             //Yii::info('-----------' . var_export($countRow, true), __METHOD__);
             $count = $countRow['total_rows'];
 
-            Yii::info('-----------$count=' . $count . '; $offset=' . $offset, __METHOD__);
+            //Yii::info('-----------$count=' . $count . '; $offset=' . $offset, __METHOD__);
 
             // может редирект сделать на первую страницу? но для SEO важнее 404
             if ($offset > $count)
@@ -121,6 +143,13 @@ class ListContentContent extends ListContentBase
 
         // заполнить элементы потомками.
         // а вот не надо!!!! мы сделаем переход внутрь так как данный режим для редактирования контента
+
+        // добавим фильтр в список
+        $filter = $this->getContentForListFilter($site,  $lang, $section, $page, $listContent, $content_args);
+        //Yii::info('-----------$filter=' . var_export($filter, true), __METHOD__);
+        foreach($filter as $i) {
+            $list[] = $i;
+        }
 
         return [$list, $count];
     }

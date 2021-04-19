@@ -121,10 +121,10 @@ class Content extends BaseModel
         {
             $query = static::addFiltersFromContentArgs($query, $content_args);
 
-            // для начала вычислим коунт
-            // при вычислении count можно похерить join для оптимизации! todo!
-            $countRow = $query->select('count(*)')->asArray()->one();
-            $count = $countRow[0];
+            // для начала вычислим total_rows
+            // при вычислении count можно похерить left join для оптимизации! todo!
+            $countRow = $query->select('count(*) as total_rows')->asArray()->one();
+            $count = $countRow['total_rows'];
 
             // может редирект сделать на первую страницу? но для SEO важнее 404
             if ($offset > $count)
@@ -263,7 +263,7 @@ class Content extends BaseModel
                     // если тип контента это список, то в $content_args у нас могут быть переданы параметры типа номер текущей страницы или имя конкретного элемента
                     if ($c['type'] === Template::TYPE_LIST) // $c['type'] это тип шаблона
                     {
-                        $list[$k]['settings']['list_path'] = $c['path']; // для формирования пагинатора
+                        $list[$k]['settings']['path'] = $c['path']; // для формирования пагинатора
                         $per_page = static::getContentSetting($c, 'per_page', 10); // число итемов на странице берем из настроек контента и если там нет, то шаблона
 
                         // так как списков на странице может быть несколько, то надо проверить, а может юзер пошел по именнно по этому списку. если нет то показываем первую страницу спсика

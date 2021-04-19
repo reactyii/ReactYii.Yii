@@ -324,7 +324,7 @@ class ReactController extends Controller
 
         // еще надо заполнить контентом
         $content = Content::getContentForPage($site, $lang, $section, $page, $parts);
-        //Yii::info('=====> $content[' . $path . ']=' . var_export($content, true), __METHOD__);
+        Yii::info('=====> $content[' . $path . ']=' . var_export($content, true), __METHOD__);
 
         return [
             $lang,
