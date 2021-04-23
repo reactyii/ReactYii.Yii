@@ -35,30 +35,72 @@ class ListContentContent extends ListContentBase
 
     public function getContentForListFilter(&$site, &$lang, &$section, &$page, $listContent, &$content_args)
     {
-        return [
+        $form = [
             [
                 'content' => '',
                 'id' => $listContent['id'],
-                'template_key' => 'FormFilterContent',
+                'template_key' => 'FormFilterContent,FormFilter,Form',
                 'type' => 'form',
                 //'model' => 'content', // ссылка на самих себя
-                'path' => $listContent['path'], //'contentslist', // для формирования action
-                'settings' => ['method' => 'get'],
+                //'path' => $listContent['path'], //'contentslist', // для формирования action
+                'settings' => ['method' => 'get', 'formname' => 'content', 'path' => $listContent['path']],
                 'content_keys' => ['FILTER'],
                 'childs' => [
                     [
-                        'content' => 'filter content',
+                        'id' => 10, // id нужен для ключа (key) на фронте
+                        'content' => '',
+                        'type' => 'field',
+                        'template_key' => 'Field',
+                        'settings' => ['type' => 'text', 'formname' => 'content', 'fieldname' => 't', 'value'=>'ttest'],
+                        'childs' => [],
+                    ],
+                    [
+                        'id' => 20, // id нужен для ключа (key) на фронте
+                        'content' => '',
+                        'type' => 'field',
+                        'template_key' => 'FieldSelect',
+                        'settings' => ['formname' => 'content', 'fieldname' => 'sel', 'value'=>'sel2', 'options'=>json_encode(['12'=>'dven12', '14'=>'sdfs14'])],
+                        'childs' => [
+                            [
+                                'id' => 1, // по типам мы здесь можем хранить тока числа (NB! должно быть уникальное знаечние для в пределах всех значений поля)
+                                'path' => '12', // а вот тут не тока числа тут и будем писать
+                                'content' => 'dven12' // то что отображаем юзеру
+                            ],
+                            [
+                                'id' => 100, // по типам мы здесь можем хранить тока числа (NB! должно быть уникальное знаечние для в пределах всех значений поля)
+                                'path' => '14', // а вот тут не тока числа тут и будем писать
+                                'content' => 'asdqwe 14' // то что отображаем юзеру
+                            ],
+                        ],
+                    ],
+                    [
+                        'id' => 1000,
+                        'content' => 'Найти',
+                        'type' => 'submit',
+                        'template_key' => 'FormFilterContentSubmit,FormFilterSubmit,FormSubmit', // FormFilterSubmit или даже FormFilterContentSubmit
+                        'settings' => ['formname' => 'content', 'fieldname' => 'fsubm', 'value'=>'Найти', 'ignore'=>'1'],
                         'childs' => [],
                     ],
                 ],
             ],
         ];
+
+        // заполнить значениями с $content_args
+
+        return $form;
     }
 
     public function addFiltersFromContentArgs(&$query, &$content_args)
     {
         // todo
         // ...
+
+        if (sizeof($content_args) > 0)
+        {
+            $args = array_shift($content_args);
+            $tmp = explode('&', $args);
+
+        }
 
         return $query;
     }

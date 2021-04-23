@@ -463,14 +463,14 @@ class m200429_063615_content_tables extends Migration
 
         // --список контента
         $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
-            'settings_json' => json_encode(['per_page' => '4']),
+            'settings_json' => json_encode(['per_page' => '4'], JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK),
             'model' => 'page', 'type'=>Template::TYPE_LIST,
             'path' => 'pageslist',
             'priority' => 100600, 'template_key' => 'ListPages', 'menu_id'=>$menu_admin_pages_id, 'section_id' =>$admin_sect_id, 'name' => 'Страницы', 'content'=>''
         ]);
 
         $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
-            'settings_json' => json_encode(['per_page' => '4']),
+            'settings_json' => json_encode(['per_page' => '4'], JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK),
             'model' => 'content', 'type'=>Template::TYPE_LIST,
             'path' => 'contentslist',
             'priority' => 100700, 'template_key' => 'ListContent', 'menu_id'=>$menu_admin_contents_id, 'section_id' =>$admin_sect_id, 'name' => 'Список контента', 'content'=>''
@@ -493,7 +493,7 @@ class m200429_063615_content_tables extends Migration
 
             // контент для about
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
-                'settings_json' => json_encode(['align' => 'center']),
+                'settings_json' => json_encode(['align' => 'center'], JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK),
                 'priority' => 10, 'template_key' => 'H1', 'menu_id'=>$menu_about_id, 'section_id' =>null, 'name' => 'About h1', 'content'=>'<u>О</u> компании'
             ]);
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
@@ -506,18 +506,18 @@ class m200429_063615_content_tables extends Migration
             $about_table_cid = $this->db->getLastInsertID();
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
                 'parent_id' => $about_table_cid,
-                'content_keys_json' => json_encode(['ROWS']),
+                'content_keys_json' => json_encode(['ROWS'], JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK),
                 'priority' => 10, 'menu_id'=>$menu_about_id, 'section_id' =>null, 'name' => 'About 1 строка таблицы', 'template_key'=>'TestTableRow'
             ]);
             $about_table_row1_cid = $this->db->getLastInsertID();
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
                 'parent_id' => $about_table_row1_cid,
-                'content_keys_json' => json_encode(['COLS']),
+                'content_keys_json' => json_encode(['COLS'], JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK),
                 'priority' => 10, 'menu_id'=>$menu_about_id, 'section_id' =>null, 'name' => 'About 1 строка 1 ячейка таблицы', 'template_key'=>'TestTableCol', 'content'=>'col <b>11</b>'
             ]);
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
                 'parent_id' => $about_table_row1_cid,
-                'content_keys_json' => json_encode(['COLS']),
+                'content_keys_json' => json_encode(['COLS'], JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK),
                 // в шаблоны записанные в БД низя передать настройки %( кроме каких-то совсем общих параметров
                 //'settings_json' => json_encode(['align' => 'center']),
                 'priority' => 20, 'menu_id'=>$menu_about_id, 'section_id' =>null, 'name' => 'About 1 строка 2 ячейка таблицы', 'template_key'=>'TestTableCol', 'content'=>'col <b>12</b>'
