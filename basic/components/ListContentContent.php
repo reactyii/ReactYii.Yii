@@ -43,7 +43,7 @@ class ListContentContent extends ListContentBase
                 'type' => 'form',
                 //'model' => 'content', // ссылка на самих себя
                 //'path' => $listContent['path'], //'contentslist', // для формирования action
-                'settings' => ['method' => 'get', 'formname' => 'content', 'path' => $listContent['path']],
+                'settings' => ['method' => 'get', 'path' => $listContent['path']],
                 'content_keys' => ['FILTER'],
                 'childs' => [
                     [
@@ -51,7 +51,7 @@ class ListContentContent extends ListContentBase
                         'content' => '',
                         'type' => 'field',
                         'template_key' => 'Field',
-                        'settings' => ['type' => 'text', 'formname' => 'content', 'fieldname' => 't', 'value'=>'ttest'],
+                        'settings' => ['type' => 'text', 'formpath' => $listContent['path'], 'fieldname' => 't', 'value'=>'ttest'],
                         'childs' => [],
                     ],
                     [
@@ -59,15 +59,20 @@ class ListContentContent extends ListContentBase
                         'content' => '',
                         'type' => 'field',
                         'template_key' => 'FieldSelect',
-                        'settings' => ['formname' => 'content', 'fieldname' => 'sel', 'value'=>'sel2', 'options'=>json_encode(['12'=>'dven12', '14'=>'sdfs14'])],
+                        'settings' => ['formpath' => $listContent['path'], 'fieldname' => 'sel', 'value'=>'sel2', 'options'=>json_encode(['12'=>'dven12', '14'=>'sdfs14'])],
                         'childs' => [
                             [
-                                'id' => 1, // по типам мы здесь можем хранить тока числа (NB! должно быть уникальное знаечние для в пределах всех значений поля)
+                                'id' => 0, // по типам мы здесь можем хранить тока числа (NB! должно быть уникальное знаечние в пределах всех значений поля)
+                                'path' => '', // а вот тут не тока числа тут и будем писать
+                                'content' => 'Выберите знаечние' // то что отображаем юзеру
+                            ],
+                            [
+                                'id' => 1, // по типам мы здесь можем хранить тока числа (NB! должно быть уникальное знаечние в пределах всех значений поля)
                                 'path' => '12', // а вот тут не тока числа тут и будем писать
                                 'content' => 'dven12' // то что отображаем юзеру
                             ],
                             [
-                                'id' => 100, // по типам мы здесь можем хранить тока числа (NB! должно быть уникальное знаечние для в пределах всех значений поля)
+                                'id' => 100, // по типам мы здесь можем хранить тока числа (NB! должно быть уникальное знаечние в пределах всех значений поля)
                                 'path' => '14', // а вот тут не тока числа тут и будем писать
                                 'content' => 'asdqwe 14' // то что отображаем юзеру
                             ],
@@ -76,9 +81,17 @@ class ListContentContent extends ListContentBase
                     [
                         'id' => 1000,
                         'content' => 'Найти',
-                        'type' => 'submit',
+                        'type' => 'submitform',
                         'template_key' => 'FormFilterContentSubmit,FormFilterSubmit,FormSubmit', // FormFilterSubmit или даже FormFilterContentSubmit
-                        'settings' => ['formname' => 'content', 'fieldname' => 'fsubm', 'value'=>'Найти', 'ignore'=>'1'],
+                        'settings' => ['formpath' => $listContent['path'], 'fieldname' => 'fsubm', 'value'=>'Найти', 'ignore'=>'1'],
+                        'childs' => [],
+                    ],
+                    [
+                        'id' => 1010,
+                        'content' => 'Сбросить',
+                        'type' => 'resetform',
+                        'template_key' => 'FormFilterContentReset,FormFilterReset,FormReset',
+                        'settings' => ['formpath' => $listContent['path'], 'value'=>'Сбросить', 'ignore'=>'1'],
                         'childs' => [],
                     ],
                 ],
