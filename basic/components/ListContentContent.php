@@ -63,16 +63,19 @@ class ListContentContent extends ListContentBase
                         'childs' => [
                             [
                                 'id' => 0, // по типам мы здесь можем хранить тока числа (NB! должно быть уникальное знаечние в пределах всех значений поля)
+                                'type' => 'option',
                                 'path' => '', // а вот тут не тока числа тут и будем писать
                                 'content' => 'Выберите знаечние' // то что отображаем юзеру
                             ],
                             [
                                 'id' => 1, // по типам мы здесь можем хранить тока числа (NB! должно быть уникальное знаечние в пределах всех значений поля)
+                                'type' => 'option',
                                 'path' => '12', // а вот тут не тока числа тут и будем писать
                                 'content' => 'dven12' // то что отображаем юзеру
                             ],
                             [
                                 'id' => 100, // по типам мы здесь можем хранить тока числа (NB! должно быть уникальное знаечние в пределах всех значений поля)
+                                'type' => 'option',
                                 'path' => '14', // а вот тут не тока числа тут и будем писать
                                 'content' => 'asdqwe 14' // то что отображаем юзеру
                             ],
@@ -98,24 +101,7 @@ class ListContentContent extends ListContentBase
             ],
         ];
 
-        // заполнить значениями с $content_args
-
         return $form;
-    }
-
-    public function addFiltersFromContentArgs(&$query, &$content_args)
-    {
-        // todo
-        // ...
-
-        if (sizeof($content_args) > 0)
-        {
-            $args = array_shift($content_args);
-            $tmp = explode('&', $args);
-
-        }
-
-        return $query;
     }
 
     /**
@@ -125,7 +111,7 @@ class ListContentContent extends ListContentBase
     {
         //Yii::info('!!!-----------!!!!!!!!!', __METHOD__);
         //return [[], 0];
-        $count = null;
+        //$count = null;
         $query = Content::find()
             //->select('c.*, t.type, t.settings_json')
             // так как у нас контентов может быть много и все они сериализуются и идут на фронт то делаем сразу оптимизацию и убираем все лишнее
@@ -143,8 +129,17 @@ class ListContentContent extends ListContentBase
 
         if ($item === null) // сам список
         {
-            // здесь именно "static::"
-            $query = $this->addFiltersFromContentArgs($query, $content_args);
+            // добавим фильтр в список
+            $formFilterContent = $this->getContentForListFilter($site,  $lang, $section, $page, $listContent, $content_args);
+            //Yii::info('-----------$formFilterContent=' . var_export($formFilterContent, true), __METHOD__);
+
+            $fields = [];
+            Form::getFieldsFromContent($formFilterContent, $fields);
+            $formData = Form::getFormDataFromContentArgsPath($content_args);
+            Yii::info('-----------$formData=' . var_export($formData, true), __METHOD__);
+            Form::fillForm($formFilterContent, $formData);
+            Yii::info('-----------filled filter=' . var_export($formFilterContent, true), __METHOD__);
+            //$query = $this->addFiltersFromFormData($query, $formData, $fields);
 
             // для начала вычислим total_rows
             // при вычислении count можно похерить left join для оптимизации! todo!
@@ -182,6 +177,10 @@ class ListContentContent extends ListContentBase
                 $list[$k]['settings']['name'] = $v['name']; // нужно для формирования удобочитаемого списка
             }
 
+            foreach ($formFilterContent as $i)
+            {
+                $list[] = $i;
+            }
         }
         else // элемент списка
         {
@@ -198,13 +197,6 @@ class ListContentContent extends ListContentBase
 
         // заполнить элементы потомками.
         // а вот не надо!!!! мы сделаем переход внутрь так как данный режим для редактирования контента
-
-        // добавим фильтр в список
-        $filter = $this->getContentForListFilter($site,  $lang, $section, $page, $listContent, $content_args);
-        //Yii::info('-----------$filter=' . var_export($filter, true), __METHOD__);
-        foreach($filter as $i) {
-            $list[] = $i;
-        }
 
         return [$list, $count];
     }
