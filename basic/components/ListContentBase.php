@@ -37,12 +37,20 @@ abstract class ListContentBase extends BaseObject
                 // обязательн опроверяем а есть ли у нас такое поле в фильтре если нет, то 404
                 if (!isset($fields[$name])) throw new \yii\web\NotFoundHttpException();
                 $isMultiple = isset($fields[$name]['settings']['multiple']) && $fields[$name]['settings']['multiple'];
+                $type = isset($fields[$name]['settings']['type']) ? $fields[$name]['settings']['type'] : '';
                 if ($isMultiple)
                 {
                     // проверить а массив ли у нас в гете
                 }
                 $tableFieldName = isset($fields[$name]['settings']['tablefieldname']) ? $fields[$name]['settings']['tablefieldname'] : $name;
-                $query->andWhere([$tableFieldName => $value]);
+                switch($type)
+                {
+                    case 'text':
+                        $query->andWhere(['like', $tableFieldName, $value]);
+                        //$query->andWhere(['like', $tableFieldName, '%' . str_replace('%','\\%',$value), false]); // чтобы сделать `c`.`name` LIKE '%sfd\%s'
+                        break;
+                    default: //$query->andWhere([$tableFieldName => $value]);
+                }
             }
         }
 

@@ -51,7 +51,7 @@ class ListContentContent extends ListContentBase
                         'content' => '',
                         'type' => 'field',
                         'template_key' => 'Field',
-                        'settings' => ['type' => 'text', 'formpath' => $listContent['path'], 'fieldname' => 't', 'value'=>'ttest'],
+                        'settings' => ['type' => 'text', 'formpath' => $listContent['path'], 'fieldname' => 'name', 'value'=>'', 'label'=>'Название', 'tablefieldname'=>'c.name', 'where'=>''],
                         'childs' => [],
                     ],
                     [
@@ -136,10 +136,10 @@ class ListContentContent extends ListContentBase
             $fields = [];
             Form::getFieldsFromContent($formFilterContent, $fields);
             $formData = Form::getFormDataFromContentArgsPath($content_args);
-            Yii::info('-----------$formData=' . var_export($formData, true), __METHOD__);
+            //Yii::info('-----------$formData=' . var_export($formData, true), __METHOD__);
             Form::fillForm($formFilterContent, $formData);
-            Yii::info('-----------filled filter=' . var_export($formFilterContent, true), __METHOD__);
-            //$query = $this->addFiltersFromFormData($query, $formData, $fields);
+            //Yii::info('-----------filled filter=' . var_export($formFilterContent, true), __METHOD__);
+            $query = $this->addFiltersFromFormData($query, $formData, $fields);
 
             // для начала вычислим total_rows
             // при вычислении count можно похерить left join для оптимизации! todo!

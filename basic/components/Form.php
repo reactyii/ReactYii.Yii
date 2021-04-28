@@ -46,6 +46,13 @@ class Form extends BaseObject
         if (sizeof($content_args) > 0) {
             $argsstr = array_shift($content_args);
 
+            // очень большая проблема передать одиноч символ '%' в пути (в get проблем нет). Решение: на фронте делаем след
+            // 1. arg = encodeURIComponent(i) + '=' + encodeURIComponent(g[i] as string)
+            // 2. arg = arg.replace('~', '~7E').replace('%', '~25')
+            $argsstr = str_replace(['~7E', '~7e'], ['~', '~'], str_replace(['~25'], ['%'], $argsstr));
+            // urldecode не нужен так как фрэймворк сам это делает замены на фронте мы делаем до encodeURIComponent
+            //$argsstr = urldecode(str_replace(['~7E', '~7e'], ['~', '~'], str_replace(['~25'], ['%'], $argsstr)));
+
             $tmp = explode('&', $argsstr);
             foreach ($tmp as $pair) {
                 $_tmp = explode('=', $pair);
