@@ -17,11 +17,9 @@ class Form extends BaseObject
             static::getFieldsFromContent($_contentList, $result);
             return;
         }*/
-        foreach ($contentList as $item)
-        {
+        foreach ($contentList as $item) {
             if ($item['type'] == 'field') $result[$item['settings']['fieldname']] = $item;
-            if (isset($item['childs']) && $item['childs'])
-            {
+            if (isset($item['childs']) && $item['childs']) {
                 static::getFieldsFromContent($item['childs'], $result);
             }
         }
@@ -29,10 +27,8 @@ class Form extends BaseObject
 
     public static function fillForm(&$contentList, &$formData)
     {
-        foreach ($contentList as $i=>$item)
-        {
-            if (isset($item['childs']) && $item['childs'])
-            {
+        foreach ($contentList as $i => $item) {
+            if (isset($item['childs']) && $item['childs']) {
                 static::fillForm($contentList[$i]['childs'], $formData);
             }
             if ($item['type'] !== 'field') continue;
@@ -57,7 +53,7 @@ class Form extends BaseObject
             foreach ($tmp as $pair) {
                 $_tmp = explode('=', $pair);
                 //$res[$_tmp[0]] = $_tmp[1];
-                if (preg_match('/^[a-z0-9_\\[\\]]+$/i', $_tmp[0])) // на всякий пожарный страханемся. здесь имя может быть массив но пока массивы не работают
+                if (preg_match('/^[a-z0-9_\\[\\]]+$/i', $_tmp[0])) // на всякий пожарный страханемся. здесь имя может быть массив
                 {
                     if (preg_match('/\\[\\]$/i', $_tmp[0])) {
                         if (!isset($res[$_tmp[0]])) $res[$_tmp[0]] = [];

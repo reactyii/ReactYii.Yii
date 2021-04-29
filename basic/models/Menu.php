@@ -2,6 +2,7 @@
 namespace app\models;
 
 use Yii;
+use yii\base\BaseObject;
 use yii\caching\TagDependency;
 
 /**
@@ -69,6 +70,51 @@ class Menu extends BaseModel
             ]
         ]));
     }/**/
+
+    public static function getAllForSelect(&$site, $parent = null, $fNameForValue = 'id', $fNameForTitle = 'name', $parentName = 'parent_id')
+    {
+        $key = implode('-', [
+            $site != null ? $site['id'] : '',
+            $parent != null ? $parent : '',
+            $fNameForValue, $fNameForTitle, $parentName,
+            static::getCacheBaseKey(),
+            __FUNCTION__
+        ]);
+        return Yii::$app->cache->getOrSet($key, function () use ($key, $site, $parent, $fNameForValue, $fNameForTitle, $parentName) {
+            Yii::info("getAll. get from DB key=" . $key, __METHOD__);
+            $where = $site != null ? [
+                static::tableName() . '.' . 'site_id' => $site['id'],
+            ] : [];
+            if ($parentName != null) $where[static::tableName() . '.' . $parentName] = $parent;
+
+            $list = self::find()
+                ->select(['id' => static::tableName() . '.' . $fNameForValue, 'content' => $fNameForTitle, 'section'=> 's.name'])
+                ->where($where)
+                ->join('LEFT JOIN', Section::tableName() . ' s', 'section_id = s.id')
+                ->orderBy([
+                    static::tableName() . '.' . 'priority' => SORT_ASC,
+                    static::tableName() . '.' . 'id' => SORT_ASC
+                ])
+                ->asArray()
+                ->all();
+
+            foreach ($list as $k => $v) {
+                $list[$k]['path'] = $v[$fNameForValue];
+                $list[$k]['type'] = 'option';
+                if ($v['section']) $list[$k]['content'] = $v['section'] . '&raquo;' . $list[$k]['content'];
+                if ($parentName != null) {
+                    $list[$k]['childs'] = static::getAllForSelect($site, $v[$fNameForValue], $fNameForValue, $fNameForTitle, $parentName);
+                }
+            }
+
+            return $list;
+        }, null, new TagDependency([
+            'tags' => [
+                'site-' . $site['id'],
+                static::getCacheBaseKey() . '-' . $site['id']
+            ]
+        ]));
+    }
 
     /**
      * Готовим дерево меню для сайта

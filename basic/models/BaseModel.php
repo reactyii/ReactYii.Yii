@@ -27,6 +27,46 @@ abstract class BaseModel extends \yii\db\ActiveRecord
         return trim(static::tableName(), '%{}'); // вот так короче будет для наших целей
     }
 
+    public static function getAllForSelect(&$site, $parent = null, $fNameForValue = 'id', $fNameForTitle = 'name', $parentName = 'parent_id')
+    {
+        $key = implode('-', [
+            $site != null ? $site['id'] : '',
+            $parent != null ? $parent : '',
+            $fNameForValue, $fNameForTitle, $parentName,
+            static::getCacheBaseKey(),
+            __FUNCTION__
+        ]);
+        return Yii::$app->cache->getOrSet($key, function () use ($key, $site, $parent, $fNameForValue, $fNameForTitle, $parentName) {
+            Yii::info("getAllForSelect. get from DB key=" . $key, __METHOD__);
+            $where = $site != null ? [
+                'site_id' => $site['id'],
+            ] : [];
+            if ($parentName != null) $where[$parentName] = $parent;
+
+            $list = self::find()
+                ->select(['id' => $fNameForValue, 'content' => $fNameForTitle])
+                ->where($where)
+                ->orderBy(static::$getAllOrderBy)
+                ->asArray()
+                ->all();
+
+            foreach ($list as $k => $v) {
+                $list[$k]['path'] = $v[$fNameForValue];
+                $list[$k]['type'] = 'option';
+                if ($parentName != null) {
+                    $list[$k]['childs'] = static::getAllForSelect($site, $v[$fNameForValue], $fNameForValue, $fNameForTitle, $parentName);
+                }
+            }
+
+            return $list;
+        }, null, new TagDependency([
+            'tags' => [
+                'site-' . $site['id'],
+                static::getCacheBaseKey() . '-' . $site['id']
+            ]
+        ]));
+    }
+
     public static function getAll(&$site)
     {
         $key = implode('-', [
@@ -51,17 +91,17 @@ abstract class BaseModel extends \yii\db\ActiveRecord
         ]));
     }
 
-    public static function getItemByPage(&$site, $page, $tags=[])
+    public static function getItemByPage(&$site, $page, $tags = [])
     {
         return static::getItemByField($site, ['page=:page'], [':page' => $page], 'page=' . $page, $tags);
     }
 
-    public static function getItemById(&$site, $id, $tags=[])
+    public static function getItemById(&$site, $id, $tags = [])
     {
         return static::getItemByField($site, ['id=:id'], [':id' => $id], 'id=' . $id, $tags);
     }
 
-    public static function getItemByField(&$site, $where, $whereParams, $uniqueWhereKey, $tags=[])
+    public static function getItemByField(&$site, $where, $whereParams, $uniqueWhereKey, $tags = [])
     {
         //$_key_where = [];
         /*$_where = ['site_id' => $site['id']]; // это нужно для всех сущностей (кроме самого сайта, н осайт мы ресолвим по своей функцией)
@@ -87,13 +127,13 @@ abstract class BaseModel extends \yii\db\ActiveRecord
 
             return $query->addParams($whereParams)//->where($_where)
             ->asArray()
-            ->one();
+                ->one();
         }, null, new TagDependency([
             'tags' => [
-                'site-' . $site['id'],
-                static::getCacheBaseKey() . '-' . $site['id'] // чтоб чистить когда чистим все кеши для данной таблицы (у списка точно такой же)
-                // а вот нужен ли ключ для отдельной записи пока хз, если понадобится мы передадим его в $tags
-            ] + $tags
+                    'site-' . $site['id'],
+                    static::getCacheBaseKey() . '-' . $site['id'] // чтоб чистить когда чистим все кеши для данной таблицы (у списка точно такой же)
+                    // а вот нужен ли ключ для отдельной записи пока хз, если понадобится мы передадим его в $tags
+                ] + $tags
         ]));
     }
 
@@ -105,7 +145,7 @@ abstract class BaseModel extends \yii\db\ActiveRecord
     public static function listToHash(&$list, $keyName = 'id')
     {
         $res = [];
-        array_map(function($v) use (&$res, $keyName) {
+        array_map(function ($v) use (&$res, $keyName) {
             $res[$v[$keyName]] = $v;
         }, $list);
         /*foreach ($list as $v)
@@ -119,7 +159,7 @@ abstract class BaseModel extends \yii\db\ActiveRecord
      * Преобразуем ассоциативный массив в дерево.
      *
      */
-    public static function hashToTree(&$list, $idName='id', $childsName = 'childs', $parentName = 'parent_id')
+    public static function hashToTree(&$list, $idName = 'id', $childsName = 'childs', $parentName = 'parent_id')
     {
         $tree = [];
         foreach ($list as $k => $v) // не стоит делать &$v как то оно не очень предсказуемо работает (см пример с foreach https://www.php.net/manual/ru/language.references.php)
@@ -127,20 +167,17 @@ abstract class BaseModel extends \yii\db\ActiveRecord
             if ($v[$parentName]) // парент есть значит вставляем его в чилдсы паренту
             {
                 //Yii::info("-----" . var_export($v[$parentName], true), __METHOD__);
-                if (isset($list[$v[$parentName]]))
-                {
+                if (isset($list[$v[$parentName]])) {
                     if (!isset($list[$v[$parentName]][$childsName])) $list[$v[$parentName]][$childsName] = [];
                     $list[$v[$parentName]][$childsName][] = &$list[$k]; // NB! &$ альтернатива делать рекурсию
-                }
-                else // у нас нарушена целостность данных в БД
+                } else // у нас нарушена целостность данных в БД
                 {
                     Yii::error('Нарушена целостность данных в БД. Таблица: ' . static::tableName() . ' Итем с id=' . $v[$idName] . ' отсутствует парент с ид: ' . $v[$parentName], __METHOD__);
                 }
             }
         }
         //Yii::info("====" . var_export($list, true), __METHOD__);
-        foreach ($list as $v)
-        {
+        foreach ($list as $v) {
             if (!$v[$parentName]) // тока корневые узлы
             {
                 $tree[] = $v;
@@ -152,13 +189,16 @@ abstract class BaseModel extends \yii\db\ActiveRecord
     /**
      * Десериализуем жсоны в списке
      *
-    */
-    public static function json_decode_list(&$list, $fields, $remove_source = true, $depth = 512, $options = 0) {
-        array_walk($list, function(&$item) use ($fields, $remove_source, $depth, $options) {
+     */
+    public static function json_decode_list(&$list, $fields, $remove_source = true, $depth = 512, $options = 0)
+    {
+        array_walk($list, function (&$item) use ($fields, $remove_source, $depth, $options) {
             static::json_decode_item($item, $fields, $remove_source, $depth, $options);
         });
     }
-    public static function json_decode_item(&$item, $fields, $remove_source = true, $depth = 512, $options = 0) {
+
+    public static function json_decode_item(&$item, $fields, $remove_source = true, $depth = 512, $options = 0)
+    {
         foreach ($fields as $k => $v) {
             if ($item[$k]) {
                 $item[$v] = json_decode($item[$k], true, $depth, $options);

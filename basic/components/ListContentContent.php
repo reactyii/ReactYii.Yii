@@ -4,6 +4,7 @@ namespace app\components;
 use app\models\Template;
 use yii;
 use app\models\Content;
+use app\models\Menu;
 use yii\base\BaseObject;
 use yii\db\ActiveRecord;
 
@@ -33,8 +34,55 @@ class ListContentContent extends ListContentBase
         Content::registerContentList();
     }/**/
 
+    function getContentForItemEdit(&$site, &$lang, &$section, &$page, $listContent, &$get, &$post)
+    {
+        $pageOptions = Menu::getAllForSelect($site, null, 'id', 'menu_name');
+        array_unshift($pageOptions, ['id' => 0, 'path' => '', 'content' => 'Выберите страницу', 'type' => 'option']);
+        $form = [
+            [
+                'content' => '',
+                'id' => $listContent['id'],
+                'template_key' => 'FormFilterContent,FormFilter,Form',
+                'type' => 'form',
+                //'model' => 'content', // ссылка на самих себя
+                //'path' => $listContent['path'], //'contentslist', // для формирования action
+                'settings' => ['method' => 'get', 'path' => $listContent['path']],
+                'content_keys' => ['FILTER'],
+                'childs' => [
+                    [
+                        'id' => 10, // id нужен для ключа (key) на фронте
+                        'content' => '',
+                        'type' => 'field',
+                        'template_key' => 'FieldHidden',
+                        'settings' => ['type' => 'text', 'formpath' => $listContent['path'], 'fieldname' => 'name', 'value' => '', 'label' => 'Название', 'tablefieldname' => 'c.name', 'where' => ''],
+                        'childs' => [],
+                    ],
+                    [
+                        'id' => 20, // id нужен для ключа (key) на фронте
+                        'content' => '',
+                        'type' => 'field',
+                        'template_key' => 'FieldSelectTreePage,FieldSelectTree,FieldSelect',
+                        'settings' => ['formpath' => $listContent['path'], 'fieldname' => 'page_id', 'value' => 'sel2', 'label' => 'Страница', 'tablefieldname' => 'c.menu_id'],
+                        'childs' => $pageOptions
+                    ],
+                    [
+                        'id' => 1000,
+                        'content' => 'Сохранить',
+                        'type' => 'submitform',
+                        'template_key' => 'FormContentSubmit,FormSubmit', // FormFilterSubmit или даже FormFilterContentSubmit
+                        'settings' => ['formpath' => $listContent['path'], 'fieldname' => 'fsubm', 'value' => 'Сохранить', 'ignore' => '1'],
+                        'childs' => [],
+                    ],
+                ],
+            ],
+        ];
+        return $form;
+    }
+
     public function getContentForListFilter(&$site, &$lang, &$section, &$page, $listContent, &$content_args)
     {
+        $pageOptions = Menu::getAllForSelect($site, null, 'id', 'menu_name');
+        array_unshift($pageOptions, ['id' => 0, 'path' => '', 'content' => 'Выберите страницу', 'type' => 'option']);
         $form = [
             [
                 'content' => '',
@@ -51,42 +99,23 @@ class ListContentContent extends ListContentBase
                         'content' => '',
                         'type' => 'field',
                         'template_key' => 'Field',
-                        'settings' => ['type' => 'text', 'formpath' => $listContent['path'], 'fieldname' => 'name', 'value'=>'', 'label'=>'Название', 'tablefieldname'=>'c.name', 'where'=>''],
+                        'settings' => ['type' => 'text', 'formpath' => $listContent['path'], 'fieldname' => 'name', 'value' => '', 'label' => 'Название', 'tablefieldname' => 'c.name', 'where' => ''],
                         'childs' => [],
                     ],
                     [
                         'id' => 20, // id нужен для ключа (key) на фронте
                         'content' => '',
                         'type' => 'field',
-                        'template_key' => 'FieldSelect',
-                        'settings' => ['formpath' => $listContent['path'], 'fieldname' => 'sel', 'value'=>'sel2', 'options'=>json_encode(['12'=>'dven12', '14'=>'sdfs14'])],
-                        'childs' => [
-                            [
-                                'id' => 0, // по типам мы здесь можем хранить тока числа (NB! должно быть уникальное знаечние в пределах всех значений поля)
-                                'type' => 'option',
-                                'path' => '', // а вот тут не тока числа тут и будем писать
-                                'content' => 'Выберите знаечние' // то что отображаем юзеру
-                            ],
-                            [
-                                'id' => 1, // по типам мы здесь можем хранить тока числа (NB! должно быть уникальное знаечние в пределах всех значений поля)
-                                'type' => 'option',
-                                'path' => '12', // а вот тут не тока числа тут и будем писать
-                                'content' => 'dven12' // то что отображаем юзеру
-                            ],
-                            [
-                                'id' => 100, // по типам мы здесь можем хранить тока числа (NB! должно быть уникальное знаечние в пределах всех значений поля)
-                                'type' => 'option',
-                                'path' => '14', // а вот тут не тока числа тут и будем писать
-                                'content' => 'asdqwe 14' // то что отображаем юзеру
-                            ],
-                        ],
+                        'template_key' => 'FieldSelectTreePage,FieldSelectTree,FieldSelect',
+                        'settings' => ['formpath' => $listContent['path'], 'fieldname' => 'page_id', 'value' => 'sel2', 'label' => 'Страница', 'tablefieldname' => 'c.menu_id'],
+                        'childs' => $pageOptions
                     ],
                     [
                         'id' => 1000,
                         'content' => 'Найти',
                         'type' => 'submitform',
                         'template_key' => 'FormFilterContentSubmit,FormFilterSubmit,FormSubmit', // FormFilterSubmit или даже FormFilterContentSubmit
-                        'settings' => ['formpath' => $listContent['path'], 'fieldname' => 'fsubm', 'value'=>'Найти', 'ignore'=>'1'],
+                        'settings' => ['formpath' => $listContent['path'], 'fieldname' => 'fsubm', 'value' => 'Найти', 'ignore' => '1'],
                         'childs' => [],
                     ],
                     [
@@ -94,7 +123,7 @@ class ListContentContent extends ListContentBase
                         'content' => 'Сбросить',
                         'type' => 'resetform',
                         'template_key' => 'FormFilterContentReset,FormFilterReset,FormReset',
-                        'settings' => ['formpath' => $listContent['path'], 'value'=>'Сбросить', 'ignore'=>'1'],
+                        'settings' => ['formpath' => $listContent['path'], 'value' => 'Сбросить', 'ignore' => '1'],
                         'childs' => [],
                     ],
                 ],
