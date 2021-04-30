@@ -34,6 +34,7 @@ abstract class ListContentBase extends BaseObject
             //Yii::info('----------$formData=' . var_export($formData, true), __METHOD__);
             foreach ($formData as $name => $value) {
                 // обязательн опроверяем а есть ли у нас такое поле в фильтре если нет, то 404
+                //Yii::info('----------(field)$name=' . $name, __METHOD__);
                 if (!isset($fields[$name])) throw new \yii\web\NotFoundHttpException();
                 $isMultiple = isset($fields[$name]['settings']['multiple']) && $fields[$name]['settings']['multiple'];
                 $type = isset($fields[$name]['settings']['type']) ? $fields[$name]['settings']['type'] : '';

@@ -46,23 +46,30 @@ class ListContentContent extends ListContentBase
                 'type' => 'form',
                 //'model' => 'content', // ссылка на самих себя
                 //'path' => $listContent['path'], //'contentslist', // для формирования action
-                'settings' => ['method' => 'get', 'path' => $listContent['path']],
-                'content_keys' => ['FILTER'],
+                'settings' => ['method' => 'post', 'path' => $listContent['path']],
+                'content_keys' => [], // занимаем основное поле контента
                 'childs' => [
                     [
                         'id' => 10, // id нужен для ключа (key) на фронте
                         'content' => '',
                         'type' => 'field',
                         'template_key' => 'FieldHidden',
-                        'settings' => ['type' => 'text', 'formpath' => $listContent['path'], 'fieldname' => 'name', 'value' => '', 'label' => 'Название', 'tablefieldname' => 'c.name', 'where' => ''],
+                        'settings' => ['type' => 'text', 'formpath' => $listContent['path'], 'fieldname' => 'id', 'value' => ''],
                         'childs' => [],
                     ],
                     [
                         'id' => 20, // id нужен для ключа (key) на фронте
                         'content' => '',
                         'type' => 'field',
+                        'template_key' => 'Field',
+                        'settings' => ['formpath' => $listContent['path'], 'fieldname' => 'name', 'value' => '', 'label' => 'Название'],
+                    ],
+                    [
+                        'id' => 30, // id нужен для ключа (key) на фронте
+                        'content' => '',
+                        'type' => 'field',
                         'template_key' => 'FieldSelectTreePage,FieldSelectTree,FieldSelect',
-                        'settings' => ['formpath' => $listContent['path'], 'fieldname' => 'page_id', 'value' => 'sel2', 'label' => 'Страница', 'tablefieldname' => 'c.menu_id'],
+                        'settings' => ['formpath' => $listContent['path'], 'fieldname' => 'menu_id', 'value' => '', 'label' => 'Страница'],
                         'childs' => $pageOptions
                     ],
                     [
@@ -107,7 +114,7 @@ class ListContentContent extends ListContentBase
                         'content' => '',
                         'type' => 'field',
                         'template_key' => 'FieldSelectTreePage,FieldSelectTree,FieldSelect',
-                        'settings' => ['formpath' => $listContent['path'], 'fieldname' => 'page_id', 'value' => 'sel2', 'label' => 'Страница', 'tablefieldname' => 'c.menu_id'],
+                        'settings' => ['formpath' => $listContent['path'], 'multiple'=>true, 'fieldname' => 'menu_id', 'value' => 'sel2', 'label' => 'Страница', 'tablefieldname' => 'c.menu_id'],
                         'childs' => $pageOptions
                     ],
                     [
@@ -201,6 +208,7 @@ class ListContentContent extends ListContentBase
 
                 // а вот поменять "content_keys" надо. причем сохранив исходный вариант
                 $list[$k]['settings']['content_keys'] = isset($v['content_keys']) && $v['content_keys'] ? json_encode($v['content_keys']) : [];
+                $list[$k]['settings']['enable_edit'] = true; // разрешаем редактировать
                 $list[$k]['content_keys'] = ['CONTENT'];
 
                 $list[$k]['settings']['name'] = $v['name']; // нужно для формирования удобочитаемого списка
@@ -210,6 +218,18 @@ class ListContentContent extends ListContentBase
             {
                 $list[] = $i;
             }
+
+            // добавим ссылку на добавление итема
+            $list[] = [
+                'content' => 'Добавить',
+                'id' => -100,
+                'template_key' => 'AContentAdd,AAdd,A',
+                'type' => 'link',
+                'content_keys' => ['LINKADD'],
+                'settings' => [
+                    'url' => '' // формируется на фронте
+                ],
+            ];
         }
         else // элемент списка
         {

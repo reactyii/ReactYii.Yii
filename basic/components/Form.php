@@ -56,10 +56,11 @@ class Form extends BaseObject
                 if (preg_match('/^[a-z0-9_\\[\\]]+$/i', $_tmp[0])) // на всякий пожарный страханемся. здесь имя может быть массив
                 {
                     if (preg_match('/\\[\\]$/i', $_tmp[0])) {
-                        if (!isset($res[$_tmp[0]])) $res[$_tmp[0]] = [];
+                        $fname = rtrim($_tmp[0], '\\[\\]'); // убираем из имени поля []
+                        if (!isset($res[$fname])) $res[$fname] = [];
 
                         // у массива всегда $ignore_empty = true
-                        if (sizeof($_tmp) > 1) $res[$_tmp[0]][] = $_tmp[1];
+                        if (sizeof($_tmp) > 1) $res[$fname][] = $_tmp[1];
                     } else {
                         if (sizeof($_tmp) == 1) {
                             if (!$ignore_empty) $res[$_tmp[0]] = ''; // хз какое значение тут поставить по идее это всегда равно пустой строке
