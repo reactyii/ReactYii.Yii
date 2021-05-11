@@ -64,7 +64,7 @@ class Content extends BaseModel
      * @throws ServerErrorHttpException
      * @throws \yii\web\NotFoundHttpException
      */
-    public static function getContentForList(&$site, &$lang, &$section, &$page, $listContent, &$content_args, $offset, $limit, $item = null, $recursion_level = 0)
+    public static function getContentForList(&$site, &$lang, &$section, &$page, $listContent, &$content_args, &$get, &$post, $offset, $limit, $item = null, $recursion_level = 0)
     {
         // в кеш не загоняем так как мы загоним в кеш все узлы контента для страницы
 
@@ -74,46 +74,42 @@ class Content extends BaseModel
         // пробуем найти обработчки списка
         if (isset($listContent['model']) && $listContent['model']) // список по модели
         {
-            if (!isset(static::$_list[$listContent['model']]))
-            {
+            if (!isset(static::$_list[$listContent['model']])) {
                 $mess = 'Отсутствует обработчик для списка: "' . $listContent['model'] . '"';
                 //Yii::error($mess, __METHOD__);
                 throw new ServerErrorHttpException($mess);
             }
 
-            return static::$_list[$listContent['model']]->getContentForList($site, $lang, $section, $page, $listContent, $content_args, $offset, $limit, $item, $recursion_level);
+            return static::$_list[$listContent['model']]->getContentForList($site, $lang, $section, $page, $listContent, $content_args, $get, $post, $offset, $limit, $item, $recursion_level);
         }
 
         $count = null;
         $query = self::find()
-        //->select('c.*, t.type, t.settings_json')
-        // так как у нас контентов может быть много и все они сериализуются и идут на фронт то делаем сразу оптимизацию и убираем все лишнее
-        // названия полей таблицы НЕ будем делать короче (все современные браузеры поддерживают сжатие ответа сервера)
-        //->select(static::$_sel)
-        ->from(static::tablename() . '  c')
-        // вот почему я не долюбливаю всякие ормы! при join оно сцуко делает 2 доп НЕНУЖНЫХ запроса на резолв структуры таблицы
-        // SHOW FULL COLUMNS FROM `content`
-        // и SELECT ... FROM `information_schema`.`REFERENTIAL_CONSTRAINTS` AS `rc`
-        ->join('LEFT JOIN', Template::tableName() . ' t' ,  'c.template_key = t.key')
-        ->where([
-            'c.site_id' => $site['id'],
-            //'c.parent_id' => $parent_id,
-        ]);
+            //->select('c.*, t.type, t.settings_json')
+            // так как у нас контентов может быть много и все они сериализуются и идут на фронт то делаем сразу оптимизацию и убираем все лишнее
+            // названия полей таблицы НЕ будем делать короче (все современные браузеры поддерживают сжатие ответа сервера)
+            //->select(static::$_sel)
+            ->from(static::tablename() . '  c')
+            // вот почему я не долюбливаю всякие ормы! при join оно сцуко делает 2 доп НЕНУЖНЫХ запроса на резолв структуры таблицы
+            // SHOW FULL COLUMNS FROM `content`
+            // и SELECT ... FROM `information_schema`.`REFERENTIAL_CONSTRAINTS` AS `rc`
+            ->join('LEFT JOIN', Template::tableName() . ' t', 'c.template_key = t.key')
+            ->where([
+                'c.site_id' => $site['id'],
+                //'c.parent_id' => $parent_id,
+            ]);
 
         $query = $query->andWhere('c.menu_id=:menuid or c.is_all_menu=1', [':menuid' => $page['id']])
-        ->andWhere('c.is_blocked=0')
-        ->andWhere(['c.language_id' => null]);// NB! делаем поиск строго для языка по умолчанию (пеервод будем делать позднее, его может тупо не быть для какого-то промежуточного узла)
+            ->andWhere('c.is_blocked=0')
+            ->andWhere(['c.language_id' => null]);// NB! делаем поиск строго для языка по умолчанию (пеервод будем делать позднее, его может тупо не быть для какого-то промежуточного узла)
 
         // NB! нам надо запретить подгрузку элементов списка! так как данных там может быть много и нам надо делать загрузку списка с учетом пагинации
         //$query = $query->andWhere('is_list_item=0');
         $query = $query->andWhere('parent_id=:parent', [':parent' => $listContent['id']]);
 
-        if ($section)
-        {
+        if ($section) {
             $query = $query->andWhere('c.section_id=:sectionid or c.is_all_section=1', [':sectionid' => $section['id']]);
-        }
-        else
-        {
+        } else {
             $query = $query->andWhere(['c.section_id' => null]);
         }
 
@@ -140,13 +136,23 @@ class Content extends BaseModel
 
             static::json_decode_list($list, ['content_keys_json' => 'content_keys', 'settings_json' => 'settings', 'template_settings_json' => 'template_settings']);
 
-            foreach ($list as $k => $v)
-            {
-                $list[$k]['childs'] = static::getContentForPage($site, $lang, $section, $page, $content_args, $v['id'], $recursion_level + 1);
+            foreach ($list as $k => $v) {
+                $list[$k]['childs'] = static::getContentForPage($site, $lang, $section, $page, $content_args, $get, $post, $v['id'], $recursion_level + 1);
             }
-        }
-        else // элемент списка
-        {
+        } else if (strpos($item, '__') === 0) {
+            $action = array_shift($content_args);
+            // todo внести слова начинающиеся с "__" в черный список для path
+            if ($action === '__edit') {
+                if (sizeof($content_args) === 0) // ожидаем id сущности
+                    throw new \yii\web\NotFoundHttpException();
+
+                $id = array_shift($content_args);
+
+                $list = null; // пока вместо формы вставим удаление самого списка
+
+            } // возможно будут еще варианты
+            // else {}
+        } else { // элемент списка
             $query = $query->andWhere('c.page=:path', [':path' => $item]);
             $list = $query
                 ->select('c.*, t.type, t.settings_json as template_settings_json') // при вытаскивании поштучно нам нужны уже все данные
@@ -159,7 +165,7 @@ class Content extends BaseModel
 
             static::json_decode_item($list, ['content_keys_json' => 'content_keys', 'settings_json' => 'settings', 'template_settings_json' => 'template_settings']);
 
-            $list['childs'] = static::getContentForPage($site, $lang, $section, $page, $content_args, $list['id'], $recursion_level + 1);
+            $list['childs'] = static::getContentForPage($site, $lang, $section, $page, $content_args, $get, $post, $list['id'], $recursion_level + 1);
         }
 
         return [$list, $count];
@@ -190,7 +196,7 @@ class Content extends BaseModel
      * Готовим список единиц контента для страницы.
      *
      */
-    public static function getContentForPage(&$site, &$lang, &$section, &$page, &$content_args, $parent_id = null, $recursion_level = 0)
+    public static function getContentForPage(&$site, &$lang, &$section, &$page, &$content_args, &$get=null, &$post=null, $parent_id = null, $recursion_level = 0)
     {
         // сильно выпадать по ошибке не будем, ибо что-то мы сможем показать юзеру более менее корректно
         if (!static::checkRecursionLevel($recursion_level)) return [];
@@ -207,7 +213,8 @@ class Content extends BaseModel
         ]);
         Yii::info("getContentForPage. key=" . $key, __METHOD__);
 
-        $contentList = Yii::$app->cache->getOrSet($key, function () use ($key, $site, $lang, $page, $section, $content_args, $parent_id, $recursion_level) {
+        //$contentList = Yii::$app->cache->getOrSet($key, function () use ($key, $site, $lang, $page, $section, $content_args, $parent_id, $recursion_level, $get, $post) {
+        $f = function () use ($key, $site, $lang, $page, $section, $content_args, $parent_id, $recursion_level, $get, $post) {
             Yii::info("getContentForPage. get from DB key=" . $key, __METHOD__);
 
             $query = self::find()
@@ -219,7 +226,7 @@ class Content extends BaseModel
                 // вот почему я не долюбливаю всякие ормы! при join оно сцуко делает 2 доп НЕНУЖНЫХ запроса на резолв структуры таблицы
                 // SHOW FULL COLUMNS FROM `content`
                 // и SELECT ... FROM `information_schema`.`REFERENTIAL_CONSTRAINTS` AS `rc`
-                ->join('LEFT JOIN', Template::tableName() . ' t' ,  'c.template_key = t.key')
+                ->join('LEFT JOIN', Template::tableName() . ' t', 'c.template_key = t.key')
                 ->where([
                     'c.site_id' => $site['id'],
                     'c.parent_id' => $parent_id,
@@ -233,12 +240,9 @@ class Content extends BaseModel
             // убираем сей флаг. все равно нам нужна рекурсия
             //$query = $query->andWhere('is_list_item=0');
 
-            if ($section)
-            {
+            if ($section) {
                 $query = $query->andWhere('c.section_id=:sectionid or c.is_all_section=1', [':sectionid' => $section['id']]);
-            }
-            else
-            {
+            } else {
                 $query = $query->andWhere(['c.section_id' => null]);
             }
 
@@ -246,8 +250,8 @@ class Content extends BaseModel
                 'c.priority' => SORT_ASC,
                 'c.id' => SORT_ASC
             ])
-            ->asArray()
-            ->all();
+                ->asArray()
+                ->all();
             // Yii::info("getContentForPage. ----------------------------------- request to db end " . $key, __METHOD__);
 
             // todo надо как-то смержить настройки самого элемента и настройки шаблона, я так думаю берем за основу настройки элемента и дополняем из шаблона отсутствующие
@@ -258,8 +262,7 @@ class Content extends BaseModel
             {
                 //$listDatas = []; // сюда будем догружать контенты для списков
                 //$forRemove = [];
-                foreach ($list as $k => $c)
-                {
+                foreach ($list as $k => $c) {
                     // если тип контента это список, то в $content_args у нас могут быть переданы параметры типа номер текущей страницы или имя конкретного элемента
                     if ($c['type'] === Template::TYPE_LIST) // $c['type'] это тип шаблона
                     {
@@ -276,20 +279,29 @@ class Content extends BaseModel
                             if (sizeof($content_args) === 0) // такой урл не коректен если мы зашли в список то должны либо выбрать страницу либо конкретный итем
                                 throw new \yii\web\NotFoundHttpException();
 
-                            if (ctype_digit($content_args[0])) // не будем вводить лишних сущностей и слов в путь. если число то считаем его номеров страницы, если строка то это path единицы списка
-                            {
+                            if (ctype_digit($content_args[0])) { // не будем вводить лишних сущностей и слов в путь. если число то считаем его номеров страницы, если строка то это path единицы списка
                                 $cur_page = array_shift($content_args);
-                                list($_listDatas, $total_rows) = static::getContentForList($site, $lang, $section, $page, $c, $content_args, $cur_page * $per_page, $per_page);
+                                list($_listDatas, $total_rows) = static::getContentForList($site, $lang, $section, $page, $c, $content_args, $get, $post, $cur_page * $per_page, $per_page);
                                 //$listDatas += $_listDatas;
                                 $list[$k]['childs'] = $_listDatas;
                                 $list[$k]['settings']['per_page'] = $per_page;
                                 $list[$k]['settings']['total_rows'] = $total_rows;
                                 $list[$k]['settings']['cur_page'] = $cur_page;
-                            }
-                            else
-                            {
+                            } /*else if (strpos($content_args[0], '__') === 0) { // лишнии сущности все таки понадобились
+                                $action = array_shift($content_args);
+                                // todo внести слова начинающиеся с "__" в черный список для path
+                                if ($action === '__edit') {
+                                    if (sizeof($content_args) === 0) // ожидаем id сущности
+                                        throw new \yii\web\NotFoundHttpException();
+
+                                    $id = array_shift($content_args);
+                                    //$list[$k] = null;
+
+                                } // возможно будут еще варианты
+                                // else {}
+                            }*/ else {
                                 $item = array_shift($content_args);
-                                list($_listItem, $total_rows) = static::getContentForList($site, $lang, $section, $page, $c, $content_args, null, null, $item, $recursion_level + 1);
+                                list($_listItem, $total_rows) = static::getContentForList($site, $lang, $section, $page, $c, $content_args, $get, $post, null, null, $item, $recursion_level + 1);
 
                                 // а вот тут мы должны заменить? сам список элементом - НЕТ.
                                 // здесь мы должны
@@ -304,72 +316,54 @@ class Content extends BaseModel
                                 //Yii::error("getContentForPage. not implemented yet", __METHOD__);
                             }
 
-                            // нельзя прерывать break; так как мы должны заполнить другие списки по крайней мере перовой страницей
+                            // нельзя прерывать break; так как мы должны заполнить другие списки по крайней мере первой страницей
                             //break;
 
                             // здесь должно быть так - мы можем зайти тока в 1 список строго
-                            if (sizeof($content_args) > 0)
-                            {
+                            if (sizeof($content_args) > 0) {
                                 throw new \yii\web\NotFoundHttpException();
                             }
-                        }
-                        else // заполняем первую страницу
-                        {
+                        } else { // заполняем первую страницу
                             $not_used_content_args = []; // так как передаем по ссылке, то сосздадим фэйковый пустой массив аргументов
-                            list($_listDatas, $total_rows) = static::getContentForList($site, $lang, $section, $page, $c, $not_used_content_args, 0, $per_page, null, $recursion_level + 1);
+                            list($_listDatas, $total_rows) = static::getContentForList($site, $lang, $section, $page, $c, $not_used_content_args, $get, $post, 0, $per_page, null, $recursion_level + 1);
                             //$listDatas += $_listDatas;
                             $list[$k]['childs'] = $_listDatas;
                             $list[$k]['settings']['per_page'] = $per_page;
                             $list[$k]['settings']['total_rows'] = $total_rows;
                             $list[$k]['settings']['cur_page'] = 0;
                         }
-                    }
-                    else
-                    {
-                        $list[$k]['childs'] = static::getContentForPage($site, $lang, $section, $page, $content_args, $c['id'], $recursion_level + 1);
+                    } else {
+                        $list[$k]['childs'] = static::getContentForPage($site, $lang, $section, $page, $content_args, $get, $post, $c['id'], $recursion_level + 1);
                     }
                 }
 
                 // а вот после прохождения всего списка у нас должен быть абсолютно пустой $content_args и если это не так, то мы должны выдать 404, чтоб поисковики не ползали там где не надо
-                if (sizeof($content_args) > 0)
-                {
+                if (sizeof($content_args) > 0) {
                     Yii::error("getContentForPage. !-!-!-!-!-!-!-!-!-!-!-!-!-", __METHOD__);
                     throw new \yii\web\NotFoundHttpException();
                 }
-
-                /*if (sizeof($forRemove) > 0)
-                {
-                    // обязательно учесть что елси удаляемых больше 1, то все след после первого надо уменьшать на -1 затем на -2 и тд или удалять начиная с конца!
-                    $forRemove = array_reverse($forRemove);
-                    foreach ($forRemove as $removeInd)
-                    {
-                        // ...
-                    }
-
-                    Yii::error("getContentForPage. not implemented yet", __METHOD__);
-                }*/
-
-                //$list += $listDatas; // позже мы сварганим корректное дерево
             }
 
-
             return $list;
-            //Yii::info("getContentForPage. source list=" . var_export($list, true), __METHOD__);
+        };
 
-            //$list = static::listToHash($list);
-
-            //Yii::info("getContentForPage. hash=" . var_export($list, true), __METHOD__);
-
-            //return static::hashToTree($list);
-        }, null, new TagDependency([
-            'tags' => [
-                'site-' . $site['id'],
-                static::getCacheBaseKey() . '-' . $site['id'],
-                'page-' . $page['id'] // чтобы при изменении одной единицы контента скинуть все для конкретной страницы
-            ]
-        ]));
-
-        return $contentList;
+        // в случае если у нас есть post, то сразу минуем кеширование
+        // также если есть get данные, то тоже минуем кеширование (гет используем для передачи начальных параметров в форму добавления)
+        if ($post === null && ($get === null || sizeof($get) === 0)) {
+            return Yii::$app->cache->getOrSet($key, $f, null, new TagDependency([
+                'tags' => [
+                    'site-' . $site['id'],
+                    static::getCacheBaseKey() . '-' . $site['id'],
+                    'page-' . $page['id'] // чтобы при изменении одной единицы контента скинуть все для конкретной страницы
+                ]
+            ]));
+        } else {
+            /*Yii::info("getContentForPage. get or set exist => cache disable."
+                . ($get !== null || sizeof($get) > 0 ? ' get=' . var_export($get, true) : '')
+                //. ' sizeof($get)=' . sizeof($get)
+                , __METHOD__);/**/
+            return $f();
+        }
     }
 
     // -------------------------------------------- auto generated -------------------------

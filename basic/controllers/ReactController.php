@@ -57,13 +57,23 @@ class ReactController extends Controller
         $site = Site::getSite($host);
 
         if ($request->isAjax) {
+            $_get = $request->get();
+            $get= [];
+            foreach($_get as $k=>$v) {
+                if ($k === 'url') continue; // вот нахрена $request->get() сует url в гет параметры? ппц!!!
+                if (strpos($k, '__') === 0) continue; // скипаем наши системные параметры типа "__siteLM"
+                $get[$k] = $v;
+            }
+            //$get = null; // для тестирования условия
 
-            list ($lang, $section, $page, $content) = $this->parsePath($site, $path);
+            $post = $request->isPost ? $request->post() : null;
+
+            list ($lang, $section, $page, $content) = $this->parsePath($site, $path, $get, $post);
             //$site['sections'] = Section::getFilteredTree($site, $lang, ['is_blocked' => 0]);
             $site['menus'] = Menu::getFilteredTree($site, $lang, ['is_blocked' => 0]);
 
             // sleep(3); // отладка
-            Yii::info('prepare json data for page', __METHOD__);
+            //Yii::info('prepare json data for page', __METHOD__);
             if ($path == '404.html') {
                 throw new \yii\web\NotFoundHttpException();
                 // return false;
@@ -79,7 +89,7 @@ class ReactController extends Controller
             // $page['requestedpath'] = '/' . $path; // это не нужно. на фронте запрашиваемый путь передается в колбэке запроса (через замыкание)
             $session = [];
             $siteLM = $request->get('__siteLM');
-            Yii::info('__siteLM=[' . $siteLM . '] site[lastModified]=' . $site['lastModified'], __METHOD__);
+            //Yii::info('__siteLM=[' . $siteLM . '] site[lastModified]=' . $site['lastModified'], __METHOD__);
             if (! $siteLM || $siteLM < $site['lastModified']) {
                 $session['site'] = $site;
                 // Yii::info('send session', __METHOD__);
@@ -262,7 +272,7 @@ class ReactController extends Controller
      * @return string
      * @throws \yii\web\NotFoundHttpException
      */
-    private function parsePath(&$site, $path)
+    private function parsePath(&$site, $path, &$get, &$post)
     {
         $lang = null;
         $section = null;
@@ -323,7 +333,7 @@ class ReactController extends Controller
         }
 
         // еще надо заполнить контентом
-        $content = Content::getContentForPage($site, $lang, $section, $page, $parts);
+        $content = Content::getContentForPage($site, $lang, $section, $page, $parts, $get, $post);
         //Yii::info('=====> $content[' . $path . ']=' . var_export($content, true), __METHOD__);
 
         return [

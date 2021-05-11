@@ -11,6 +11,7 @@ use yii\db\ActiveRecord;
 class ListContentContent extends ListContentBase
 {
     protected $id = 'content'; // это значение указывается в Content->model у единицы контента типа список
+
     /*public $prop1;
     public $prop2;
 
@@ -34,6 +35,7 @@ class ListContentContent extends ListContentBase
         Content::registerContentList();
     }/**/
 
+    /*
     function getContentForItemEdit(&$site, &$lang, &$section, &$page, $listContent, &$get, &$post)
     {
         $pageOptions = Menu::getAllForSelect($site, null, 'id', 'menu_name');
@@ -85,7 +87,7 @@ class ListContentContent extends ListContentBase
         ];
         return $form;
     }
-
+    /**/
     public function getContentForListFilter(&$site, &$lang, &$section, &$page, $listContent, &$content_args)
     {
         $pageOptions = Menu::getAllForSelect($site, null, 'id', 'menu_name');
@@ -114,7 +116,7 @@ class ListContentContent extends ListContentBase
                         'content' => '',
                         'type' => 'field',
                         'template_key' => 'FieldSelectTreePage,FieldSelectTree,FieldSelect',
-                        'settings' => ['formpath' => $listContent['path'], 'multiple'=>true, 'fieldname' => 'menu_id', 'value' => 'sel2', 'label' => 'Страница', 'tablefieldname' => 'c.menu_id'],
+                        'settings' => ['formpath' => $listContent['path'], 'multiple' => true, 'fieldname' => 'menu_id', 'value' => 'sel2', 'label' => 'Страница', 'tablefieldname' => 'c.menu_id'],
                         'childs' => $pageOptions
                     ],
                     [
@@ -140,10 +142,64 @@ class ListContentContent extends ListContentBase
         return $form;
     }
 
+
+    public function getContentForEditForm(&$site, &$lang, &$section, &$page, $listContent)
+    {
+        $pageOptions = Menu::getAllForSelect($site, null, 'id', 'menu_name');
+        array_unshift($pageOptions, ['id' => 0, 'path' => '', 'content' => 'Выберите страницу', 'type' => 'option']);
+        $form = [
+            [
+                'content' => '',
+                'id' => $listContent['id'],
+                'template_key' => 'FormContent,Form',
+                'type' => 'form',
+                //'model' => 'content', // ссылка на самих себя
+                //'path' => $listContent['path'], //'contentslist', // для формирования action
+                'settings' => ['method' => 'post', 'path' => $listContent['path']],
+                'content_keys' => [],
+                'childs' => [
+                    [
+                        'id' => 10, // id нужен для ключа (key) на фронте
+                        'content' => '',
+                        'type' => 'field',
+                        'template_key' => 'Field',
+                        'settings' => ['type' => 'hidden', 'formpath' => $listContent['path'], 'fieldname' => 'name', 'value' => '', 'label' => 'Название', 'tablefieldname' => 'c.name', 'where' => ''],
+                        'childs' => [],
+                    ],
+                    [
+                        'id' => 20, // id нужен для ключа (key) на фронте
+                        'content' => '',
+                        'type' => 'field',
+                        'template_key' => 'Field',
+                        'settings' => ['formpath' => $listContent['path'], 'fieldname' => 'name', 'value' => '', 'label' => 'Название'],
+                    ],
+                    [
+                        'id' => 30, // id нужен для ключа (key) на фронте
+                        'content' => '',
+                        'type' => 'field',
+                        'template_key' => 'FieldSelectTreePage,FieldSelectTree,FieldSelect',
+                        'settings' => ['formpath' => $listContent['path'], 'fieldname' => 'menu_id', 'value' => 'sel2', 'label' => 'Страница'],
+                        'childs' => $pageOptions
+                    ],
+                    [
+                        'id' => 1000,
+                        'content' => 'Сохранить',
+                        'type' => 'submitform',
+                        'template_key' => 'FormContentSubmit,FormSubmit', // FormFilterSubmit или даже FormFilterContentSubmit
+                        'settings' => ['formpath' => $listContent['path'], 'fieldname' => 'fsubm', 'value' => 'Сохранить'],
+                        'childs' => [],
+                    ],
+                ],
+            ],
+        ];
+
+        return $form;
+    }
+    /**/
     /**
      * @throws yii\web\NotFoundHttpException
      */
-    function getContentForList(&$site, &$lang, &$section, &$page, $listContent, &$content_args, $offset, $limit, $item = null, $recursion_level = 0)
+    function getContentForList(&$site, &$lang, &$section, &$page, $listContent, &$content_args, &$get = null, &$post = null, $offset=0, $limit=null, $item = null, $recursion_level = 0)
     {
         //Yii::info('!!!-----------!!!!!!!!!', __METHOD__);
         //return [[], 0];
@@ -157,16 +213,17 @@ class ListContentContent extends ListContentBase
             // вот почему я не долюбливаю всякие ормы! при join оно сцуко делает 2 доп НЕНУЖНЫХ запроса на резолв структуры таблицы
             // SHOW FULL COLUMNS FROM `content`
             // и SELECT ... FROM `information_schema`.`REFERENTIAL_CONSTRAINTS` AS `rc`
-            ->join('LEFT JOIN', Template::tableName() . ' t' ,  'c.template_key = t.key')
+            ->join('LEFT JOIN', Template::tableName() . ' t', 'c.template_key = t.key')
             ->where([
                 'c.site_id' => $site['id'],
                 //'c.parent_id' => $parent_id,
             ]);
+        $list = null; $count = null;
 
-        if ($item === null) // сам список
-        {
+        if ($item === null) {
+            //------------------------------------- сам список
             // добавим фильтр в список
-            $formFilterContent = $this->getContentForListFilter($site,  $lang, $section, $page, $listContent, $content_args);
+            $formFilterContent = $this->getContentForListFilter($site, $lang, $section, $page, $listContent, $content_args);
             //Yii::info('-----------$formFilterContent=' . var_export($formFilterContent, true), __METHOD__);
 
             $fields = [];
@@ -201,8 +258,7 @@ class ListContentContent extends ListContentBase
 
             // меняем парента. так как модель строит списки по БД и создает элементы контента как бы исскуственно.
             // в данной модели нам надо тока поменять парента в других мы будем создавать элементы полностью
-            foreach ($list as $k => $v)
-            {
+            foreach ($list as $k => $v) {
                 // не меняем парента! теперь мы идем рекурсией
                 //$list[$k]['parent_id'] = $listContent['id'];
 
@@ -214,8 +270,7 @@ class ListContentContent extends ListContentBase
                 $list[$k]['settings']['name'] = $v['name']; // нужно для формирования удобочитаемого списка
             }
 
-            foreach ($formFilterContent as $i)
-            {
+            foreach ($formFilterContent as $i) {
                 $list[] = $i;
             }
 
@@ -230,9 +285,31 @@ class ListContentContent extends ListContentBase
                     'url' => '' // формируется на фронте
                 ],
             ];
-        }
-        else // элемент списка
-        {
+        } else if (strpos($item, '__') === 0) {
+            // ---------------------------- редактирование
+            // лишнии сущности все таки понадобились
+            $action = $item;
+            // todo внести слова начинающиеся с "__" в черный список для path
+            if ($action === '__edit') {
+                if (sizeof($content_args) === 0) // ожидаем id сущности
+                    throw new \yii\web\NotFoundHttpException();
+
+                $id = array_shift($content_args);
+
+                //$list = null;
+                $form = $this->getContentForEditForm($site, $lang, $section, $page, $listContent);
+                //Yii::info('-----------$formFilterContent=' . var_export($formFilterContent, true), __METHOD__);
+
+                $formData = $get;
+                //Yii::info('-----------$formData=' . var_export($formData, true), __METHOD__);
+                Form::fillForm($form, $formData);
+
+                $list = $form;
+
+            } // возможно будут еще варианты
+            // else {}
+        } else {
+            // --------------------------------- элемент списка
             // а вот сюда мы скорее всего заходить не должны, так как фича для админки и из списка будут тока линки на формы редактирования
             throw new \yii\web\NotFoundHttpException();
 
