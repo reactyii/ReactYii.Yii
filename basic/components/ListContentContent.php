@@ -142,7 +142,6 @@ class ListContentContent extends ListContentBase
         return $form;
     }
 
-
     public function getContentForEditForm(&$site, &$lang, &$section, &$page, $listContent)
     {
         $pageOptions = Menu::getAllForSelect($site, null, 'id', 'menu_name');
@@ -156,14 +155,23 @@ class ListContentContent extends ListContentBase
                 //'model' => 'content', // ссылка на самих себя
                 //'path' => $listContent['path'], //'contentslist', // для формирования action
                 'settings' => ['method' => 'post', 'path' => $listContent['path']],
-                'content_keys' => [],
+                //'content_keys' => [],
                 'childs' => [
+                    [
+                        'id' => -10, // id нужен для ключа (key) на фронте
+                        'content' => '',
+                        'type' => '',
+                        'template_key' => 'ErrorForm,Error',
+                        'content_keys' => ['ERROR'],
+                        'settings' => [],
+                        'childs' => [],
+                    ],
                     [
                         'id' => 10, // id нужен для ключа (key) на фронте
                         'content' => '',
                         'type' => 'field',
                         'template_key' => 'Field',
-                        'settings' => ['type' => 'hidden', 'formpath' => $listContent['path'], 'fieldname' => 'name', 'value' => '', 'label' => 'Название', 'tablefieldname' => 'c.name', 'where' => ''],
+                        'settings' => ['type' => 'hidden', 'formpath' => $listContent['path'], 'fieldname' => 'id', 'value' => ''],
                         'childs' => [],
                     ],
                     [
@@ -190,12 +198,13 @@ class ListContentContent extends ListContentBase
                         'childs' => [],
                     ],
                 ],
-            ],
+            ]
         ];
 
         return $form;
     }
     /**/
+
     /**
      * @throws yii\web\NotFoundHttpException
      */
@@ -218,7 +227,8 @@ class ListContentContent extends ListContentBase
                 'c.site_id' => $site['id'],
                 //'c.parent_id' => $parent_id,
             ]);
-        $list = null; $count = null;
+        $list = null;
+        $count = null;
 
         if ($item === null) {
             //------------------------------------- сам список
@@ -300,12 +310,16 @@ class ListContentContent extends ListContentBase
                 $form = $this->getContentForEditForm($site, $lang, $section, $page, $listContent);
                 //Yii::info('-----------$formFilterContent=' . var_export($formFilterContent, true), __METHOD__);
 
-                $formData = $get;
-                //Yii::info('-----------$formData=' . var_export($formData, true), __METHOD__);
-                Form::fillForm($form, $formData);
+                Content::editItem($site, $lang, $id, $form, $get, $post);
 
-                $list = $form;
-
+                // NB! снаружи если $item !== null, ожидается один элемент, которые замещает элемент список
+                if (sizeof($form) === 1) {
+                    $list = $form[0];
+                } else if (sizeof($form) > 1) {
+                    // да такой случай возможен, если присутствует не только форма, но и какие-то другие блоки контента (инструкции? описания? сео?)
+                    // todo создать элемент контэйнер с 'childs' = $form
+                    // ...
+                }
             } // возможно будут еще варианты
             // else {}
         } else {

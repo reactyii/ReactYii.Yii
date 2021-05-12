@@ -349,7 +349,8 @@ class Content extends BaseModel
 
         // в случае если у нас есть post, то сразу минуем кеширование
         // также если есть get данные, то тоже минуем кеширование (гет используем для передачи начальных параметров в форму добавления)
-        if ($post === null && ($get === null || sizeof($get) === 0)) {
+        // надо бы еще запретить кеширование если в $content_args есть '__edit'
+        if ($post === null && ($get === null || sizeof($get) === 0) && !in_array('__edit', $content_args)) {
             return Yii::$app->cache->getOrSet($key, $f, null, new TagDependency([
                 'tags' => [
                     'site-' . $site['id'],

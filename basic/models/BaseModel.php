@@ -1,12 +1,77 @@
 <?php
 namespace app\models;
 
+use app\components\Form;
 use Yii;
 use yii\caching\TagDependency;
 use phpDocumentor\Reflection\Types\Static_;
 
 abstract class BaseModel extends \yii\db\ActiveRecord
 {
+    public static function checkRights(&$site, &$formContent, $action = 'read')
+    {
+        return true;
+    }
+
+    // ----------------------------------------------- SAVE
+    public static function checkForm(&$fields, &$lang, &$formData, &$errors)
+    {
+        // блок тестирования отображения ошибок
+        $errors[''] = ['text' => 'Error test'];
+        $errors['name'] = ['title'=>'Название', 'text' => 'Поле обязательно для заполнения'];
+
+        return Form::checkForm($fields,$lang , $formData, $errors);
+    }
+
+    public static function editItem(&$site, &$lang, $id, &$formContent, &$get, &$post)
+    {
+        // todo проверка прав доступа
+        if (!static::checkRights($site, $formContent, 'write')) {
+            //$errors[''] = ['text' => 'Method not allowed'];
+            // todo надо заменить форму сообщением, и елси юзер не авторизован, то признак что требуется авторизация
+            $formContent = [
+                [
+                    'id' => -999, // id нужен для ключа (key) на фронте
+                    'content' => 'Method not allowed',
+                    'type' => '',
+                    'template_key' => 'Error',
+                    // не все формы требуют авторизации!
+                    //'settings' => ['authRequired' => 'true'],
+                    'childs' => [],
+                ]
+            ];
+            return;
+        }
+
+        $fields = [];
+        Form::getFieldsFromContent($formContent, $fields);
+
+        $formData = null;//$post !== null ? $post : $get;
+        if ($post !== null) { // сохраниение
+            $formData = $post;
+            $errors = [];
+            if (static::checkForm($fields, $lang, $formData, $errors)) { // все ок
+                // сохраняем в БД
+
+            } else {
+                //Yii::info('-----------$formErrors=' . var_export($errors, true), __METHOD__);
+                // показываем сообщение об ошибке
+                Form::setError($formContent, $errors);
+            }
+        } else { // читаем данные из БД
+            $formData = $get;
+            if ($id !== '0') { // грузим данные из БД
+                $formData = static::getItemById($site, $id);
+            } else {
+                $formData['id'] = '0';
+            }
+        }
+
+        //Yii::info('-----------$formData=' . var_export($formData, true), __METHOD__);
+        Form::fillForm($formContent, $formData);
+    }
+
+    // ----------------------------------------------- /SAVE
 
     protected static $getAllOrderBy = [
         'priority' => SORT_ASC,
