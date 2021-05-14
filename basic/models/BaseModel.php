@@ -14,13 +14,14 @@ abstract class BaseModel extends \yii\db\ActiveRecord
     }
 
     // ----------------------------------------------- SAVE
-    public static function checkForm(&$fields, &$lang, &$formData, &$errors)
+    public static function checkForm(&$site, &$fields, &$lang, &$formData, &$errors)
     {
         // блок тестирования отображения ошибок
-        $errors[''] = ['text' => 'Error test'];
+        /*$errors[''] = ['text' => 'Error test'];
         $errors['name'] = ['title'=>'Название', 'text' => 'Поле обязательно для заполнения'];
+        /**/
 
-        return Form::checkForm($fields,$lang , $formData, $errors);
+        return Form::checkForm($site, $fields,$lang , $formData, $errors);
     }
 
     public static function editItem(&$site, &$lang, $id, &$formContent, &$get, &$post)
@@ -50,13 +51,19 @@ abstract class BaseModel extends \yii\db\ActiveRecord
         if ($post !== null) { // сохраниение
             $formData = $post;
             $errors = [];
-            if (static::checkForm($fields, $lang, $formData, $errors)) { // все ок
+
+            Yii::info('-----------$fields=' . var_export($fields, true), __METHOD__);
+            if (static::checkForm($site, $fields, $lang, $formData, $errors)) { // все ок
                 // сохраняем в БД
+                //sleep(3); // отладка
 
             } else {
-                //Yii::info('-----------$formErrors=' . var_export($errors, true), __METHOD__);
+                Yii::info('-----------$formErrors=' . var_export($errors, true), __METHOD__);
                 // показываем сообщение об ошибке
                 Form::setError($formContent, $errors);
+
+                //Yii::info('-----------$formContent with errors=' . var_export($formContent, true), __METHOD__);
+                //sleep(3); // отладка
             }
         } else { // читаем данные из БД
             $formData = $get;
@@ -69,6 +76,115 @@ abstract class BaseModel extends \yii\db\ActiveRecord
 
         //Yii::info('-----------$formData=' . var_export($formData, true), __METHOD__);
         Form::fillForm($formContent, $formData);
+    }
+
+    // вызывать без $fields опасно!!! так как все поля с поста будут писаться в запрос!!!
+    // вызывать нe опасно после вызова form_check($form, &$data) там происходит проверка на присутствие поля в форме
+    // без $fields вызываем тока то что сами проверяем
+    function saveItem($id, $data, $fields=array())
+    {
+        $table_id_name = 'id';
+        /*if (!$this->table_name)
+        {
+            $this->error = 'Не определено имя таблицы';
+            return false;
+        }
+        if (!$this->table_id_name)
+        {
+            $this->error = 'Не определено имя ключевого поля таблицы';
+            return false;
+        }*/
+        if (!$data) // обновлять нечего
+        {
+            return true;
+        }
+        $sql_params = array();
+        $sql_update = array();
+        $sql_insert_fields = array();
+        $sql_insert_values = array();
+        foreach ($data as $name=>$value)
+        {
+            if (strpos($name, '-')!==false) continue; // языковое поле !
+
+            if ($name == $this->table_id_name)
+            {
+                continue;
+            }
+
+            // признак того что поле не надо записывать в БД
+            if ($fields && isset($fields[$name]) && isset($fields[$name]['settings']['notfromdb']) && $fields[$name]['settings']['notfromdb'])
+            {
+                continue;
+            }
+
+            // поле принадлежит форме его записываем по другому
+            /*if ($fields && isset($fields[$name]) && isset($fields[$name]['field_ID']) && $fields[$name]['field_ID'])
+            {
+                continue;
+            }*/
+
+            if ($fields && isset($fields[$name]) && $fields[$name]['settings']['type']=='datetime' && !$value && $fields[$name]['settings']['default']=='now()')
+            {
+                $sql_update[] = '`' . $name . '`' . '=now()';
+                $sql_insert_fields[] = '`' . $name . '`';
+                $sql_insert_values[] = 'now()';
+            }
+            else if ($fields && isset($fields[$name]) && $fields[$name]['settings']['type']=='date' && !$value && $fields[$name]['settings']['default']=='now()')
+            {
+                $sql_update[] = '`' . $name . '`' . '=now()';
+                $sql_insert_fields[] = '`' . $name . '`';
+                $sql_insert_values[] = 'now()';
+            }
+            else if ($fields && isset($fields[$name]) && !$value && isset($fields[$name]['settings']['default']) && $fields[$name]['settings']['default']==='NULL')
+            {
+                //log_message('error', 'MY_Model::save(). '.$name.'=NULL. $fields[$name][default]='.$fields[$name]['default']);
+                $sql_update[] = '`' . $name . '`' . '=NULL';
+                $sql_insert_fields[] = '`' . $name . '`';
+                $sql_insert_values[] = 'NULL';
+            }
+            // эта проверка делается тут form_check($form, &$data)
+            //else if ($fields)
+            //{
+            //	// если форма задана и в ней нет такого поля значит пропускаем поле!!!
+            //	if (!isset($fields[$name])) continue;
+            //}
+            else
+            {
+                $sql_update[] = '`' . $name . '`' . '=?';
+                $sql_insert_fields[] = '`' . $name . '`';
+                $sql_insert_values[] = '?';
+                $sql_params[] = $value; //is_null($value)?'NULL':$value;
+            }
+        }
+
+        if ($id>0)
+        {
+            $sql_params[] = $id;
+            $sql = 'update '.$this->table_name.' set '.implode(',', $sql_update).' where '.$table_id_name.'=?';
+            //log_message('error', 'MY_Model::save(). SQL:'.$sql);
+            //$query = $this->query($sql, $sql_params);
+            $result = $id;
+        }
+        else
+        {
+            //$query = $this->query('insert into '.$this->table_name.' ('.implode(',', $sql_insert_fields).') values ('.implode(',', $sql_insert_values).')', $sql_params);
+            //$result = $this->insert_id();
+        }
+
+        /*if (!$query)
+        {
+            return false;
+        }*/
+
+        //$this->clear_cache($result);
+        // очень плохой котсыль, но пока так при редактировании нет этого поля !!!
+        // унес на уровень потомка модели, пусь сам разбирается
+        //if (isset($post['site_ID']))
+        //{
+        //	$this->clear_cache($post['site_ID'], $result);
+        //}
+
+        return $result;
     }
 
     // ----------------------------------------------- /SAVE

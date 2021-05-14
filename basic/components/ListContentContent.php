@@ -179,14 +179,14 @@ class ListContentContent extends ListContentBase
                         'content' => '',
                         'type' => 'field',
                         'template_key' => 'Field',
-                        'settings' => ['formpath' => $listContent['path'], 'fieldname' => 'name', 'value' => '', 'label' => 'Название'],
+                        'settings' => ['type'=>'string', 'required' => '1', 'formpath' => $listContent['path'], 'fieldname' => 'name', 'value' => '', 'label' => 'Название'],
                     ],
                     [
                         'id' => 30, // id нужен для ключа (key) на фронте
                         'content' => '',
                         'type' => 'field',
                         'template_key' => 'FieldSelectTreePage,FieldSelectTree,FieldSelect',
-                        'settings' => ['formpath' => $listContent['path'], 'fieldname' => 'menu_id', 'value' => 'sel2', 'label' => 'Страница'],
+                        'settings' => ['type'=>'tree', 'formpath' => $listContent['path'], 'fieldname' => 'menu_id', 'value' => 'sel2', 'label' => 'Страница'],
                         'childs' => $pageOptions
                     ],
                     [

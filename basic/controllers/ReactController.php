@@ -19,6 +19,7 @@ class ReactController extends Controller
 {
 
     public $layout = 'react';
+    public $enableCsrfValidation = false; // чтобы отправить post запрос надо обойти еще проверку от самого yii
 
     /**
      *
@@ -58,8 +59,8 @@ class ReactController extends Controller
 
         if ($request->isAjax) {
             $_get = $request->get();
-            $get= [];
-            foreach($_get as $k=>$v) {
+            $get = [];
+            foreach ($_get as $k => $v) {
                 if ($k === 'url') continue; // вот нахрена $request->get() сует url в гет параметры? ппц!!!
                 if (strpos($k, '__') === 0) continue; // скипаем наши системные параметры типа "__siteLM"
                 $get[$k] = $v;
@@ -90,7 +91,7 @@ class ReactController extends Controller
             $session = [];
             $siteLM = $request->get('__siteLM');
             //Yii::info('__siteLM=[' . $siteLM . '] site[lastModified]=' . $site['lastModified'], __METHOD__);
-            if (! $siteLM || $siteLM < $site['lastModified']) {
+            if (!$siteLM || $siteLM < $site['lastModified']) {
                 $session['site'] = $site;
                 // Yii::info('send session', __METHOD__);
             }
@@ -274,6 +275,9 @@ class ReactController extends Controller
      */
     private function parsePath(&$site, $path, &$get, &$post)
     {
+        /*if ($post) {
+            Yii::info('=====> post[' . $path . ']=' . var_export($post, true), __METHOD__);
+        }/**/
         $lang = null;
         $section = null;
         $page = null;
@@ -324,7 +328,7 @@ class ReactController extends Controller
         }
         if ($page_path === '') $page_path = 'index';
 
-        Yii::info('=====> $page_path=' . $page_path, __METHOD__);
+        //Yii::info('=====> $page_path=' . $page_path, __METHOD__);
         $page = Menu::getItemBySectionPage($site, $section, $page_path);
         //Yii::info("=====> page=" . var_export($page, true), __METHOD__);
         if (!$page)

@@ -45,7 +45,7 @@ class Form extends BaseObject
             if (isset($item['childs']) && $item['childs']) {
                 static::setError($contentList[$i]['childs'], $errors);
             }
-            if (in_array('ERROR', $item['content_keys'])) {
+            if (isset($item['content_keys']) && in_array('ERROR', $item['content_keys'])) {
                 $error_fields = [];
                 $error_message = [];
                 foreach ($errors as $f=>$err) {
@@ -66,9 +66,10 @@ class Form extends BaseObject
                     //if ($error_message) $error_message .= '<br />';
                     $error_message[] = $errors['']['text'];
                 }
-                $error_content = array_map(function($e) {
+                $_ErrId = 0;
+                $error_content = array_map(function($e) use (&$_ErrId) {
                     return [
-                        'id' => -9999, // id нужен для ключа (key) на фронте
+                        'id' => $_ErrId++, // id нужен для ключа (key) на фронте
                         'content' => $e,
                         'type' => '',
                         'childs' => [],
@@ -78,15 +79,175 @@ class Form extends BaseObject
                 $contentList[$i]['childs'] = $error_content;
             }
             if ($item['type'] !== 'field') continue;
-            if (isset($errors[$i]))
-                $contentList[$i]['settings']['error'] = $errors[$i]['text'];
+            if (isset($item['settings']['fieldname']) && isset($errors[$item['settings']['fieldname']]))
+                $contentList[$i]['settings']['error'] = $errors[$item['settings']['fieldname']]['text'];
         }
     }
 
-    public static function checkForm(&$fields, &$lang, &$formData, &$errors)
+    public static function checkForm(&$site, &$fields, &$lang, &$formData, &$errors)
     {
+        foreach ($formData as $name => $value) { // пробегаем именно по входящим данным, здесь мы приводим типы, подготавливаем строки
+            if (!isset($fields[$name])) // уберем все что не в форме (лишнее)
+            {
+                // удаление поля перенес ниже для того чтобы не удалить информацию о загруженных файлах (поле с префиксом _ нет в форме и его херит тут)
+                //log_message('error', '-->>> form_check: field name:'.$name.'='. (isset($data[$name])?$data[$name]:'---'));
+                //unset($data[$name]);
+                continue;
+            }
 
-        return true;
+            if (!isset($fields[$name]['settings'])) continue; // нет настроек поля пока пропускаем
+            $fSettings = $fields[$name]['settings'];
+
+            $fType = $fSettings['type'];
+
+            // приведем типы
+            if ($fType === 'integer') {
+                //log_message('error', '-->>> form_check: integer field name:'.$name.'='. (isset($data[$name])?$data[$name]:'---'));
+                if ($formData[$name] != '') // установлено
+                {
+                    //log_message('error', '-->>> form_check: value before:'.$name.'='. (isset($data[$name])?$data[$name]:'---'));
+                    $formData[$name] = str_replace(array(' '), array(''), $formData[$name]); // от греха исправим распространенные ошибки
+                    settype($formData[$name], 'integer');
+                    //log_message('error', '-->>> form_check: value before:'.$name.'='. (isset($data[$name])?$data[$name]:'---'));
+                } else {
+                    $formData[$name] = isset($formData[$name]['default']) ? $formData[$name]['default'] : NULL;
+                }
+            }
+            if ($fType === 'float') {
+                $formData[$name] = str_replace(array(' ', ','), array('', '.'), $formData[$name]); // от греха исправим распространенные ошибки
+                $formData[$name] = preg_replace('/[^0-9\\.\\-\\+]/', '', $formData[$name]); // от греха исправим распространенные ошибки
+                if ($formData[$name] != '') // установлено
+                {
+                    settype($formData[$name], 'float');
+                } else {
+                    $formData[$name] = isset($formData[$name]['default']) ? $formData[$name]['default'] : NULL;
+                }
+            }
+
+            $text_fields = [
+                'string', 'name', 'name_name', 'name_surname', // с этими понятно
+                'date', 'datetime', // тут тоже кроме цифр и - и пробелов ничего быть не должно
+                //'phone', 'email', // в этих дополнительно не должно быть ничего такого, хотя емайл содержит символ @
+                // в 'phone' чуть выше удалил все не цифры
+                // email = a@df.ru"><script>alert(1)</script>
+                // email мы проверяем ниже. я уже не помню зачем я разнес проверку по типам на 2 цикла
+                // вспомнил в первом цикле мы не проверяем а чистим и приводим к формату
+            ];
+            /*
+            //if ($form[$name]['type']=='string' || $form[$name]['type']=='name')
+            if (in_array($form[$name]['type'], $text_fields))
+            {
+                if ( (!isset($form[$name]['html']) || !$form[$name]['html']) )
+                {
+                    if ($data[$name]!='') // установлено
+                    {
+                        $data[$name] = htmlspecialchars($data[$name]);//html_purify($data[$name], 'comment');
+                    }
+                }
+                else
+                {
+                    if ($data[$name] != '') // установлено
+                    {
+                        $config = isset($form[$name]['htmlpurifier']) ? $form[$name]['htmlpurifier'] : 'comment';
+                        //log_message('error', '-->>> form_check: value before:'.$name.'='. (isset($data[$name])?$data[$name]:'---'));
+                        $data[$name] = html_purify($data[$name], $config);
+                        //log_message('error', '-->>> form_check: value after:'.$name.'='. (isset($data[$name])?$data[$name]:'---'));
+                    }
+                }
+
+                // проверка языков
+                if (isset($form[$name]['trans']) && $form[$name]['trans'] && sizeof($languages)>1)
+                {
+                    foreach ($languages as $l)
+                    {
+                        if ($l['is_default']) continue;
+                        if (isset($data[$name.'-'.$l['lang']]) && $data[$name.'-'.$l['lang']])
+                        {
+                            $data[$name.'-'.$l['lang']] = htmlspecialchars($data[$name.'-'.$l['lang']]);
+                        }
+                    }
+                }
+            }
+
+            if ($form[$name]['type']=='text')
+            {
+                if (isset($form[$name]['noteditor']) && $form[$name]['noteditor'] && (!isset($form[$name]['html']) || !$form[$name]['html']))
+                {
+                    if ($data[$name]!='') // установлено
+                    {
+                        $data[$name] = htmlspecialchars($data[$name]);
+                    }
+                }
+                else
+                {
+                    if ($data[$name] != '') // установлено
+                    {
+                        $config = isset($form[$name]['htmlpurifier']) ? $form[$name]['htmlpurifier'] : 'comment';
+                        //log_message('error', '-->>> form_check: value before:'.$name.'='. (isset($data[$name])?$data[$name]:'---'));
+                        $data[$name] = html_purify($data[$name], $config);
+                        //log_message('error', '-->>> form_check: value after:'.$name.'='. (isset($data[$name])?$data[$name]:'---'));
+                    }
+                }
+
+                // проверка языков
+                if (isset($form[$name]['trans']) && $form[$name]['trans'] && sizeof($languages)>1)
+                {
+                    foreach ($languages as $l)
+                    {
+                        if ($l['is_default']) continue;
+                        if (isset($data[$name.'-'.$l['lang']]) && $data[$name.'-'.$l['lang']])
+                        {
+                            if (isset($form[$name]['noteditor']) && $form[$name]['noteditor'])
+                            {
+                                $data[$name.'-'.$l['lang']] = htmlspecialchars($data[$name.'-'.$l['lang']]);
+                            }
+                            else
+                            {
+                                //log_message('error', '-->>> form_check: value before:'.$name.'-'.$l['lang'].'='. ($data[$name.'-'.$l['lang']]));
+                                $data[$name.'-'.$l['lang']] = html_purify($data[$name.'-'.$l['lang']], 'comment');
+                                //log_message('error', '-->>> form_check: value after :'.$name.'-'.$l['lang'].'='. ($data[$name.'-'.$l['lang']]));
+                            }
+                        }
+                    }
+                }
+            }
+            /**/
+        }
+
+        // проверка обязательных полей, на типы данных и прочее
+        foreach ($fields as $name => $field) {
+            if (!isset($field['settings'])) continue; // нет настроек поля пока пропускаем
+            $fSettings = $field['settings'];
+
+            if (isset($fSettings['not_check']) && $fSettings['not_check']) {
+                continue;
+            }
+
+            if (isset($fSettings['required']) && $fSettings['required']) {
+                Yii::info('-->>> form_check: field ' . $name . ' is required', __METHOD__);
+                if ($fSettings['type'] == 'tree') {
+                    if (!isset($formData[$name]) || !$formData[$name] || $formData[$name] == -1) {
+                        if (!isset($errors[$name])) $errors[$name] = array('title' => $fSettings['label'], 'text' => '');
+                        $errors[$name]['text'] .= 'Поле обязательно для заполнения.'; //"'.$field['label'].'"; lang('common_required');
+                    }
+                } /*else if (is_array($form[$name]['type']))
+                    {
+                        if (!isset($data[$name]) || !$data[$name] || !isset($data[$name]['rows']) || !$data[$name]['rows'])
+                        {
+                            if (!isset($errors[$name])) $errors[$name] = array('title'=>$fSettings['label'], 'text'=>'');
+                            $errors[$name]['text'] .= lang('common_required'); //'Поле обязательно для заполнения.'; //"'.$field['label'].'"
+                        }
+                    }*/
+                else {
+                    if (!isset($formData[$name]) || !$formData[$name]) {
+                        if (!isset($errors[$name])) $errors[$name] = array('title' => $fSettings['label'], 'text' => '');
+                        $errors[$name]['text'] .= 'Поле обязательно для заполнения.'; //"'.$field['label'].'" lang('common_required');
+                    }
+                }
+            }
+        }
+
+        return !$errors;
     }
 
     public static function getFormDataFromContentArgsPath(&$content_args, $ignore_empty = true)
