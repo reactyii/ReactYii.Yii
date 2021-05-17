@@ -30,6 +30,14 @@ use yii\caching\TagDependency;
  */
 class Site extends BaseModel
 {
+    /*
+     * Дополнительная установка значений.
+     * у самих сайтов не надо никаких доп значений, просто обнуляем установку site_id
+     */
+    public static function setAdditionalValues(&$site, &$fields, &$lang, &$formData, $id)
+    {
+    }
+
 
     // https://stackoverflow.com/questions/834303/startswith-and-endswith-functions-in-php
     // пока кинем сюда

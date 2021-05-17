@@ -224,7 +224,7 @@ class Form extends BaseObject
             }
 
             if (isset($fSettings['required']) && $fSettings['required']) {
-                Yii::info('-->>> form_check: field ' . $name . ' is required', __METHOD__);
+                //Yii::info('-->>> form_check: field ' . $name . ' is required', __METHOD__);
                 if ($fSettings['type'] == 'tree') {
                     if (!isset($formData[$name]) || !$formData[$name] || $formData[$name] == -1) {
                         if (!isset($errors[$name])) $errors[$name] = array('title' => $fSettings['label'], 'text' => '');

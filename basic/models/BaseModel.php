@@ -4,7 +4,7 @@ namespace app\models;
 use app\components\Form;
 use Yii;
 use yii\caching\TagDependency;
-use phpDocumentor\Reflection\Types\Static_;
+use yii\db\Exception;
 
 abstract class BaseModel extends \yii\db\ActiveRecord
 {
@@ -21,8 +21,20 @@ abstract class BaseModel extends \yii\db\ActiveRecord
         $errors['name'] = ['title'=>'Название', 'text' => 'Поле обязательно для заполнения'];
         /**/
 
-        return Form::checkForm($site, $fields,$lang , $formData, $errors);
+        return Form::checkForm($site, $fields, $lang, $formData, $errors);
     }
+
+    /*
+     * Дополнительная установка значений, в частности site_id
+     */
+    public static function setAdditionalValues(&$site, &$fields, &$lang, &$formData, $id)
+    {
+        if (!$id) // надо прописать доп переменные
+        {
+            $formData['site_id'] = $site['id'];
+        }
+    }
+
 
     public static function editItem(&$site, &$lang, $id, &$formContent, &$get, &$post)
     {
@@ -54,9 +66,33 @@ abstract class BaseModel extends \yii\db\ActiveRecord
 
             Yii::info('-----------$fields=' . var_export($fields, true), __METHOD__);
             if (static::checkForm($site, $fields, $lang, $formData, $errors)) { // все ок
+
                 // сохраняем в БД
                 //sleep(3); // отладка
 
+                static::setAdditionalValues($site, $fields, $lang, $formData, $id);
+                $res = static::saveItem($id, $formData, $fields);
+                if ($res !== false) {
+                    // замещаем ед контента
+                    foreach(array_keys($formContent) as $key) {
+                        unset($formContent[$key]);
+                    }
+
+                    array_unshift($formContent, [
+                        'id' => -20, // id нужен для ключа (key) на фронте
+                        'content' => 'Save success',
+                        'type' => '',
+                        'template_key' => 'MessageFormSuccess,MessageForm,Message',
+                        //'content_keys' => [],
+                        'settings' => [],
+                        'childs' => [],
+                    ]);/**/
+
+                    return;
+                }
+
+                $errors[''] = ['text' => 'Ошибка сохранения'];
+                Form::setError($formContent, $errors);
             } else {
                 Yii::info('-----------$formErrors=' . var_export($errors, true), __METHOD__);
                 // показываем сообщение об ошибке
@@ -81,19 +117,10 @@ abstract class BaseModel extends \yii\db\ActiveRecord
     // вызывать без $fields опасно!!! так как все поля с поста будут писаться в запрос!!!
     // вызывать нe опасно после вызова form_check($form, &$data) там происходит проверка на присутствие поля в форме
     // без $fields вызываем тока то что сами проверяем
-    function saveItem($id, $data, $fields=array())
+    static function saveItem($id, $data, $fields = [])
     {
         $table_id_name = 'id';
-        /*if (!$this->table_name)
-        {
-            $this->error = 'Не определено имя таблицы';
-            return false;
-        }
-        if (!$this->table_id_name)
-        {
-            $this->error = 'Не определено имя ключевого поля таблицы';
-            return false;
-        }*/
+
         if (!$data) // обновлять нечего
         {
             return true;
@@ -102,18 +129,15 @@ abstract class BaseModel extends \yii\db\ActiveRecord
         $sql_update = array();
         $sql_insert_fields = array();
         $sql_insert_values = array();
-        foreach ($data as $name=>$value)
-        {
-            if (strpos($name, '-')!==false) continue; // языковое поле !
+        foreach ($data as $name => $value) {
+            if (strpos($name, '-') !== false) continue; // языковое поле !
 
-            if ($name == $this->table_id_name)
-            {
+            if ($name == $table_id_name) {
                 continue;
             }
 
             // признак того что поле не надо записывать в БД
-            if ($fields && isset($fields[$name]) && isset($fields[$name]['settings']['notfromdb']) && $fields[$name]['settings']['notfromdb'])
-            {
+            if ($fields && isset($fields[$name]) && isset($fields[$name]['settings']['notfromdb']) && $fields[$name]['settings']['notfromdb']) {
                 continue;
             }
 
@@ -123,20 +147,15 @@ abstract class BaseModel extends \yii\db\ActiveRecord
                 continue;
             }*/
 
-            if ($fields && isset($fields[$name]) && $fields[$name]['settings']['type']=='datetime' && !$value && $fields[$name]['settings']['default']=='now()')
-            {
+            if ($fields && isset($fields[$name]) && $fields[$name]['settings']['type'] == 'datetime' && !$value && $fields[$name]['settings']['default'] == 'now()') {
                 $sql_update[] = '`' . $name . '`' . '=now()';
                 $sql_insert_fields[] = '`' . $name . '`';
                 $sql_insert_values[] = 'now()';
-            }
-            else if ($fields && isset($fields[$name]) && $fields[$name]['settings']['type']=='date' && !$value && $fields[$name]['settings']['default']=='now()')
-            {
+            } else if ($fields && isset($fields[$name]) && $fields[$name]['settings']['type'] == 'date' && !$value && $fields[$name]['settings']['default'] == 'now()') {
                 $sql_update[] = '`' . $name . '`' . '=now()';
                 $sql_insert_fields[] = '`' . $name . '`';
                 $sql_insert_values[] = 'now()';
-            }
-            else if ($fields && isset($fields[$name]) && !$value && isset($fields[$name]['settings']['default']) && $fields[$name]['settings']['default']==='NULL')
-            {
+            } else if ($fields && isset($fields[$name]) && !$value && isset($fields[$name]['settings']['default']) && $fields[$name]['settings']['default'] === 'NULL') {
                 //log_message('error', 'MY_Model::save(). '.$name.'=NULL. $fields[$name][default]='.$fields[$name]['default']);
                 $sql_update[] = '`' . $name . '`' . '=NULL';
                 $sql_insert_fields[] = '`' . $name . '`';
@@ -148,28 +167,36 @@ abstract class BaseModel extends \yii\db\ActiveRecord
             //	// если форма задана и в ней нет такого поля значит пропускаем поле!!!
             //	if (!isset($fields[$name])) continue;
             //}
-            else
-            {
-                $sql_update[] = '`' . $name . '`' . '=?';
+            else {
+                $sql_update[] = '`' . $name . '`' . '=:' . $name;
                 $sql_insert_fields[] = '`' . $name . '`';
-                $sql_insert_values[] = '?';
-                $sql_params[] = $value; //is_null($value)?'NULL':$value;
+                $sql_insert_values[] = ':' . $name;
+                $sql_params[':' . $name] = $value; //is_null($value)?'NULL':$value;
             }
         }
 
-        if ($id>0)
-        {
-            $sql_params[] = $id;
-            $sql = 'update '.$this->table_name.' set '.implode(',', $sql_update).' where '.$table_id_name.'=?';
-            //log_message('error', 'MY_Model::save(). SQL:'.$sql);
-            //$query = $this->query($sql, $sql_params);
-            $result = $id;
+        $db = Yii::$app->db;
+        try {
+            if ($id > 0) {
+                $sql_params[] = $id;
+                $sql = 'update ' . static::tableName() . ' set ' . implode(',', $sql_update) . ' where ' . $table_id_name . '=?';
+                //log_message('error', 'MY_Model::save(). SQL:'.$sql);
+                //$query = $this->query($sql, $sql_params);
+                $result = $id;
+            } else {
+                $sql = 'INSERT INTO ' . static::tableName() . ' (' . implode(',', $sql_insert_fields) . ') VALUES (' . implode(',', $sql_insert_values) . ')';
+                Yii::info('-----------insert sql = ' . $sql . ' params=' . var_export($sql_params, true), __METHOD__);
+                $db->createCommand($sql, $sql_params)->execute();
+                $result = $db->getLastInsertID();
+                //$query = $this->query('insert into '.$this->table_name.' ('.implode(',', $sql_insert_fields).') values ('.implode(',', $sql_insert_values).')', $sql_params);
+                //$result = $this->insert_id();
+
+            }
+        } catch (\yii\db\Exception $e) {
+            Yii::error($e->getMessage(), __METHOD__);
+            return false;
         }
-        else
-        {
-            //$query = $this->query('insert into '.$this->table_name.' ('.implode(',', $sql_insert_fields).') values ('.implode(',', $sql_insert_values).')', $sql_params);
-            //$result = $this->insert_id();
-        }
+
 
         /*if (!$query)
         {
@@ -193,7 +220,6 @@ abstract class BaseModel extends \yii\db\ActiveRecord
         'priority' => SORT_ASC,
         'id' => SORT_ASC
     ];
-
 
     protected static function getAllWhere(&$site)
     {

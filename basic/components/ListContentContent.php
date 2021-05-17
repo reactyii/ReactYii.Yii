@@ -186,7 +186,7 @@ class ListContentContent extends ListContentBase
                         'content' => '',
                         'type' => 'field',
                         'template_key' => 'FieldSelectTreePage,FieldSelectTree,FieldSelect',
-                        'settings' => ['type'=>'tree', 'formpath' => $listContent['path'], 'fieldname' => 'menu_id', 'value' => 'sel2', 'label' => 'Страница'],
+                        'settings' => ['type'=>'tree', 'formpath' => $listContent['path'], 'fieldname' => 'menu_id', 'value' => '', 'label' => 'Страница'],
                         'childs' => $pageOptions
                     ],
                     [
@@ -314,6 +314,7 @@ class ListContentContent extends ListContentBase
 
                 // NB! снаружи если $item !== null, ожидается один элемент, которые замещает элемент список
                 if (sizeof($form) === 1) {
+                    Yii::info('-----------$form=' . var_export($form, true), __METHOD__);
                     $list = $form[0];
                 } else if (sizeof($form) > 1) {
                     // да такой случай возможен, если присутствует не только форма, но и какие-то другие блоки контента (инструкции? описания? сео?)
