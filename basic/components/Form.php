@@ -259,7 +259,7 @@ class Form extends BaseObject
             {
                 // 1 сам себе парент
                 if ($formData[$fSettings['selfrefto']] == $formData[$name]) {
-                    if (!isset($errors[$name])) $errors[$name] = array('title' => $field['title'], 'text' => '');
+                    if (!isset($errors[$name])) $errors[$name] = array('title' => $fSettings['label'], 'text' => '');
                     $errors[$name]['text'] .= 'Поле не может находиться само в себе'; //lang('common_error_recursion'); //'Поле не может находиться само в себе'; //  "'.$field['title'].'"
                 }
                 // 2 поле не может находится в своем потомке (сцуко рекурсия)
