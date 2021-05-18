@@ -108,7 +108,7 @@ class ListContentContent extends ListContentBase
                         'content' => '',
                         'type' => 'field',
                         'template_key' => 'Field',
-                        'settings' => ['type' => 'text', 'formpath' => $listContent['path'], 'fieldname' => 'name', 'value' => '', 'label' => 'Название', 'tablefieldname' => 'c.name', 'where' => ''],
+                        'settings' => ['fieldtype' => 'text', 'formpath' => $listContent['path'], 'fieldname' => 'name', 'value' => '', 'label' => 'Название', 'tablefieldname' => 'c.name', 'where' => ''],
                         'childs' => [],
                     ],
                     [
@@ -144,8 +144,29 @@ class ListContentContent extends ListContentBase
 
     public function getContentForEditForm(&$site, &$lang, &$section, &$page, $listContent)
     {
-        $pageOptions = Menu::getAllForSelect($site, null, 'id', 'menu_name');
-        array_unshift($pageOptions, ['id' => 0, 'path' => '', 'content' => 'Выберите страницу', 'type' => 'option']);
+        //$pageOptions = Menu::getAllForSelect($site, null, 'id', 'menu_name');
+        //array_unshift($pageOptions, ['id' => 0, 'path' => '', 'content' => 'Выберите страницу', 'type' => 'option']);
+        $pageOptions = [
+            [
+                'id' => '',
+                'path' => '',
+                'content' => 'Самый верхний уровень',
+                'childs' => Menu::getAllForSelect($site, null, 'id', 'menu_name'),
+                'type' => 'option'
+            ]
+        ];
+        //Yii::info('!!!-----------!!!!!!!!!' . var_export($pageOptions, true), __METHOD__);
+
+        $contentOptions = [
+            [
+                'id' => '',
+                'path' => '',
+                'content' => 'Самый верхний уровень',
+                'childs' => Content::getAllForSelect($site, null, 'id', 'name'),
+                'type' => 'option'
+            ]
+        ];
+
         $form = [
             [
                 'content' => '',
@@ -171,7 +192,7 @@ class ListContentContent extends ListContentBase
                         'content' => '',
                         'type' => 'field',
                         'template_key' => 'Field',
-                        'settings' => ['type' => 'hidden', 'formpath' => $listContent['path'], 'fieldname' => 'id', 'value' => ''],
+                        'settings' => ['fieldtype' => 'hidden', 'formpath' => $listContent['path'], 'fieldname' => 'id', 'value' => ''],
                         'childs' => [],
                     ],
                     [
@@ -179,16 +200,24 @@ class ListContentContent extends ListContentBase
                         'content' => '',
                         'type' => 'field',
                         'template_key' => 'Field',
-                        'settings' => ['type'=>'string', 'required' => '1', 'formpath' => $listContent['path'], 'fieldname' => 'name', 'value' => '', 'label' => 'Название'],
+                        'settings' => ['fieldtype' => 'string', 'required' => '1', 'formpath' => $listContent['path'], 'fieldname' => 'name', 'value' => '', 'label' => 'Название'],
                     ],
                     [
                         'id' => 30, // id нужен для ключа (key) на фронте
                         'content' => '',
                         'type' => 'field',
                         'template_key' => 'FieldSelectTreePage,FieldSelectTree,FieldSelect',
-                        'settings' => ['type'=>'tree', 'formpath' => $listContent['path'], 'fieldname' => 'menu_id', 'value' => '', 'label' => 'Страница'],
+                        'settings' => ['fieldtype' => 'tree', 'formpath' => $listContent['path'], 'fieldname' => 'menu_id', 'value' => '', 'label' => 'Страница'],
                         'childs' => $pageOptions
                     ],
+                    [
+                        'id' => 40, // id нужен для ключа (key) на фронте
+                        'content' => '',
+                        'type' => 'field',
+                        'template_key' => 'FieldSelectTreePage,FieldSelectTree,FieldSelect',
+                        'settings' => ['fieldtype'=>'tree', 'formpath' => $listContent['path'], 'selfrefto'=>'id', 'fieldname' => 'parent_id', 'value' => '', 'label' => 'Разместить в'],
+                        'childs' => $contentOptions
+                    ],/**/
                     [
                         'id' => 1000,
                         'content' => 'Сохранить',

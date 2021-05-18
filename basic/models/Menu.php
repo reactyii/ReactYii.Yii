@@ -101,7 +101,7 @@ class Menu extends BaseModel
             foreach ($list as $k => $v) {
                 $list[$k]['path'] = $v[$fNameForValue];
                 $list[$k]['type'] = 'option';
-                if ($v['section']) $list[$k]['content'] = $v['section'] . '&raquo;' . $list[$k]['content'];
+                if ($v['section']) $list[$k]['content'] = $list[$k]['content'] . '('.$v['section'].')';
                 if ($parentName != null) {
                     $list[$k]['childs'] = static::getAllForSelect($site, $v[$fNameForValue], $fNameForValue, $fNameForTitle, $parentName);
                 }

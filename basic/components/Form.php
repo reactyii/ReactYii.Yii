@@ -18,6 +18,10 @@ class Form extends BaseObject
             return;
         }*/
         foreach ($contentList as $item) {
+            /*if (!isset($item['type'])) {
+                Yii::info('item without type!!!! $contentList=' . var_export($contentList), __METHOD__);
+                continue;
+            }/**/
             if ($item['type'] == 'field') $result[$item['settings']['fieldname']] = $item;
             if (isset($item['childs']) && $item['childs']) {
                 static::getFieldsFromContent($item['childs'], $result);
@@ -98,7 +102,7 @@ class Form extends BaseObject
             if (!isset($fields[$name]['settings'])) continue; // нет настроек поля пока пропускаем
             $fSettings = $fields[$name]['settings'];
 
-            $fType = $fSettings['type'];
+            $fType = $fSettings['fieldtype'];
 
             // приведем типы
             if ($fType === 'integer') {
@@ -122,6 +126,11 @@ class Form extends BaseObject
                 } else {
                     $formData[$name] = isset($formData[$name]['default']) ? $formData[$name]['default'] : NULL;
                 }
+            }
+
+            if ($fType === 'list' || $fType === 'tree') {
+                // если поле типа список и значение пустое, то значит в БД нам надо писать null
+                if ($formData[$name] === '') $formData[$name] = null;
             }
 
             $text_fields = [
@@ -225,8 +234,8 @@ class Form extends BaseObject
 
             if (isset($fSettings['required']) && $fSettings['required']) {
                 //Yii::info('-->>> form_check: field ' . $name . ' is required', __METHOD__);
-                if ($fSettings['type'] == 'tree') {
-                    if (!isset($formData[$name]) || !$formData[$name] || $formData[$name] == -1) {
+                if ($fSettings['fieldtype'] == 'tree') {
+                    if (!isset($formData[$name]) || !$formData[$name] || $formData[$name] == '') {
                         if (!isset($errors[$name])) $errors[$name] = array('title' => $fSettings['label'], 'text' => '');
                         $errors[$name]['text'] .= 'Поле обязательно для заполнения.'; //"'.$field['label'].'"; lang('common_required');
                     }
@@ -245,6 +254,25 @@ class Form extends BaseObject
                     }
                 }
             }
+
+            if ($fSettings['fieldtype']=='tree' && isset($fSettings['selfrefto']) && isset($formData[$fSettings['selfrefto']]) && $formData[$fSettings['selfrefto']] && isset($formData[$name])) // надо проверить чтобы небыло зацикливания веток (например сам себе парент)
+            {
+                // 1 сам себе парент
+                if ($formData[$fSettings['selfrefto']] == $formData[$name]) {
+                    if (!isset($errors[$name])) $errors[$name] = array('title' => $field['title'], 'text' => '');
+                    $errors[$name]['text'] .= 'Поле не может находиться само в себе'; //lang('common_error_recursion'); //'Поле не может находиться само в себе'; //  "'.$field['title'].'"
+                }
+                // 2 поле не может находится в своем потомке (сцуко рекурсия)
+                // найдем сам элемент
+                $item = static::find_node_in_tree($field['childs'], $formData[$fSettings['selfrefto']], $fSettings['selfrefto']);
+                // теперь попробуем найти знаечние поля в $item['childs']
+                $parent = static::find_node_in_tree($item['childs'], $formData[$name], $fSettings['selfrefto']);
+                if ($parent) {
+                    if (!isset($errors[$name])) $errors[$name] = array('title' => $fSettings['label'], 'text' => '');
+                    $errors[$name]['text'] .= 'Поле не может находиться в своем потомке';//lang('common_error_recursion_deep'); //'Поле не может находиться в своем потомке';// "'.$field['title'].'"
+                }
+            }
+
         }
 
         return !$errors;
@@ -287,6 +315,26 @@ class Form extends BaseObject
         }
 
         return $res;
+    }
+
+    public static function find_node_in_tree(&$tree, $itemid, $optionkey)
+    {
+        $optionchilds = 'childs';
+        if (!is_array($tree)) return false;
+        foreach ($tree as $node)
+        {
+            if ($node[$optionkey] == $itemid)
+            {
+                return $node;
+            }
+            if ($node[$optionchilds])
+            {
+                $result = static::find_node_in_tree($node[$optionchilds], $itemid, $optionkey);
+                if ($result)
+                    return $result;
+            }
+        }
+        return false;
     }
 
 }

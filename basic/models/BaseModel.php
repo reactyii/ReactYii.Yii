@@ -57,6 +57,7 @@ abstract class BaseModel extends \yii\db\ActiveRecord
         }
 
         $fields = [];
+        //Yii::info('-----------$formContent=' . json_encode($formContent, JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK | JSON_PRETTY_PRINT), __METHOD__);
         Form::getFieldsFromContent($formContent, $fields);
 
         $formData = null;//$post !== null ? $post : $get;
@@ -64,7 +65,7 @@ abstract class BaseModel extends \yii\db\ActiveRecord
             $formData = $post;
             $errors = [];
 
-            Yii::info('-----------$fields=' . var_export($fields, true), __METHOD__);
+            //Yii::info('-----------$fields=' . var_export($fields, true), __METHOD__);
             if (static::checkForm($site, $fields, $lang, $formData, $errors)) { // все ок
 
                 // сохраняем в БД
@@ -147,11 +148,11 @@ abstract class BaseModel extends \yii\db\ActiveRecord
                 continue;
             }*/
 
-            if ($fields && isset($fields[$name]) && $fields[$name]['settings']['type'] == 'datetime' && !$value && $fields[$name]['settings']['default'] == 'now()') {
+            if ($fields && isset($fields[$name]) && $fields[$name]['settings']['fieldtype'] == 'datetime' && !$value && $fields[$name]['settings']['default'] == 'now()') {
                 $sql_update[] = '`' . $name . '`' . '=now()';
                 $sql_insert_fields[] = '`' . $name . '`';
                 $sql_insert_values[] = 'now()';
-            } else if ($fields && isset($fields[$name]) && $fields[$name]['settings']['type'] == 'date' && !$value && $fields[$name]['settings']['default'] == 'now()') {
+            } else if ($fields && isset($fields[$name]) && $fields[$name]['settings']['fieldtype'] == 'date' && !$value && $fields[$name]['settings']['default'] == 'now()') {
                 $sql_update[] = '`' . $name . '`' . '=now()';
                 $sql_insert_fields[] = '`' . $name . '`';
                 $sql_insert_values[] = 'now()';
@@ -178,14 +179,16 @@ abstract class BaseModel extends \yii\db\ActiveRecord
         $db = Yii::$app->db;
         try {
             if ($id > 0) {
-                $sql_params[] = $id;
-                $sql = 'update ' . static::tableName() . ' set ' . implode(',', $sql_update) . ' where ' . $table_id_name . '=?';
+                $sql_params[':id'] = $id;
+                $sql = 'update ' . static::tableName() . ' set ' . implode(',', $sql_update) . ' where ' . $table_id_name . '=:id';
+                Yii::info('-----------update sql = ' . $sql . ' params=' . var_export($sql_params, true), __METHOD__);
+                $db->createCommand($sql, $sql_params)->execute();
                 //log_message('error', 'MY_Model::save(). SQL:'.$sql);
                 //$query = $this->query($sql, $sql_params);
                 $result = $id;
             } else {
                 $sql = 'INSERT INTO ' . static::tableName() . ' (' . implode(',', $sql_insert_fields) . ') VALUES (' . implode(',', $sql_insert_values) . ')';
-                Yii::info('-----------insert sql = ' . $sql . ' params=' . var_export($sql_params, true), __METHOD__);
+                //Yii::info('-----------insert sql = ' . $sql . ' params=' . var_export($sql_params, true), __METHOD__);
                 $db->createCommand($sql, $sql_params)->execute();
                 $result = $db->getLastInsertID();
                 //$query = $this->query('insert into '.$this->table_name.' ('.implode(',', $sql_insert_fields).') values ('.implode(',', $sql_insert_values).')', $sql_params);
