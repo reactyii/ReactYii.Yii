@@ -273,11 +273,33 @@ class ListContentContent extends ListContentBase
                 //$list[$k]['parent_id'] = $listContent['id'];
 
                 // а вот поменять "content_keys" надо. причем сохранив исходный вариант
-                $list[$k]['settings']['content_keys'] = isset($v['content_keys']) && $v['content_keys'] ? json_encode($v['content_keys']) : [];
-                $list[$k]['settings']['enable_edit'] = true; // разрешаем редактировать
+                $list[$k]['settings']['content_keys'] = isset($v['content_keys']) && $v['content_keys'] ? json_encode($v['content_keys']) : json_encode([]);
                 $list[$k]['content_keys'] = ['CONTENT'];
 
+                $list[$k]['settings']['type'] = $list[$k]['type'];
+                $list[$k]['type'] = 'html';
+
+                $list[$k]['settings']['template'] = $list[$k]['template'];
+                $list[$k]['template'] = '';
+
+                $list[$k]['content'] = '<b>' . $v['id'] . '</b> ' . $v['name'];
+
+                $list[$k]['settings']['template_key'] = isset($v['template_key']) && $v['template_key'] ? $v['template_key'] : '';
+                $list[$k]['template_key'] = '';
+
                 $list[$k]['settings']['name'] = $v['name']; // нужно для формирования удобочитаемого списка
+
+                // вот так разрешаем редактировать
+                $list[$k]['childs'][] = [
+                    'content' => 'Редактировать',
+                    'id' => -100,
+                    'template_key' => 'AContentEdit,AEdit,A',
+                    'type' => 'linkedit',
+                    'content_keys' => ['LINKEDIT'],
+                    'settings' => [
+                        'url' => '' // формируется на фронте
+                    ],
+                ];
             }
 
             foreach ($formFilterContent as $i) {
@@ -289,7 +311,7 @@ class ListContentContent extends ListContentBase
                 'content' => 'Добавить',
                 'id' => -100,
                 'template_key' => 'AContentAdd,AAdd,A',
-                'type' => 'link',
+                'type' => 'linkadd',
                 'content_keys' => ['LINKADD'],
                 'settings' => [
                     'url' => '' // формируется на фронте
