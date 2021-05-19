@@ -90,8 +90,18 @@ class ListContentContent extends ListContentBase
     /**/
     public function getContentForListFilter(&$site, &$lang, &$section, &$page, $listContent, &$content_args)
     {
-        $pageOptions = Menu::getAllForSelect($site, null, 'id', 'menu_name');
-        array_unshift($pageOptions, ['id' => 0, 'path' => '', 'content' => 'Выберите страницу', 'type' => 'option']);
+        //$pageOptions = Menu::getAllForSelect($site, null, 'id', 'menu_name');
+        //array_unshift($pageOptions, ['id' => 0, 'path' => '', 'content' => 'Выберите страницу', 'type' => 'option']);
+        $pageOptions = [
+            [
+                'id' => '',
+                'path' => '',
+                'content' => 'Выберите страницу',
+                'childs' => Menu::getAllForSelect($site, null, 'id', 'menu_name'),
+                'type' => 'option'
+            ]
+        ];
+
         $form = [
             [
                 'content' => '',
@@ -107,7 +117,7 @@ class ListContentContent extends ListContentBase
                         'id' => 10, // id нужен для ключа (key) на фронте
                         'content' => '',
                         'type' => 'field',
-                        'template_key' => 'Field',
+                        'template_key' => 'FieldFilter,Field',
                         'settings' => ['fieldtype' => 'text', 'formpath' => $listContent['path'], 'fieldname' => 'name', 'value' => '', 'label' => 'Название', 'tablefieldname' => 'c.name', 'where' => ''],
                         'childs' => [],
                     ],
@@ -115,7 +125,7 @@ class ListContentContent extends ListContentBase
                         'id' => 20, // id нужен для ключа (key) на фронте
                         'content' => '',
                         'type' => 'field',
-                        'template_key' => 'FieldSelectTreePage,FieldSelectTree,FieldSelect',
+                        'template_key' => 'FieldFilterSelectTreePage,FieldFilterSelectTree,FieldFilterSelect,FieldSelect',
                         'settings' => ['formpath' => $listContent['path'], 'multiple' => true, 'fieldname' => 'menu_id', 'value' => 'sel2', 'label' => 'Страница', 'tablefieldname' => 'c.menu_id'],
                         'childs' => $pageOptions
                     ],

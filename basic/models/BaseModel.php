@@ -35,7 +35,6 @@ abstract class BaseModel extends \yii\db\ActiveRecord
         }
     }
 
-
     public static function editItem(&$site, &$lang, $id, &$formContent, &$get, &$post)
     {
         // todo проверка прав доступа
@@ -88,6 +87,11 @@ abstract class BaseModel extends \yii\db\ActiveRecord
                         'settings' => [],
                         'childs' => [],
                     ]);/**/
+
+                    // скинем кеш (чистим кеш полностью)
+                    //Yii::$app->cache->flush();
+                    // чистим кеш тока определенного сайта (по идее разницы нет, у нас 1 сайт на 1 БД)
+                    TagDependency::invalidate(Yii::$app->cache, 'site-' . $site['id']);
 
                     return;
                 }

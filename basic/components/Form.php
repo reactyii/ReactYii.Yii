@@ -9,6 +9,8 @@ class Form extends BaseObject
 {
     /*
      * Возвращаем хэш полей из дерева контента
+     * Результат возвращаем через параметры функции! так как обходим не массив единиц контента, а дерево рекурсией
+     *
      */
     public static function getFieldsFromContent(&$contentList, &$result)
     {
@@ -317,9 +319,8 @@ class Form extends BaseObject
         return $res;
     }
 
-    public static function find_node_in_tree(&$tree, $itemid, $optionkey)
+    public static function find_node_in_tree(&$tree, $itemid, $optionkey, $optionchilds = 'childs')
     {
-        $optionchilds = 'childs';
         if (!is_array($tree)) return false;
         foreach ($tree as $node)
         {
