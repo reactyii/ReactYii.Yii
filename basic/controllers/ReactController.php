@@ -149,6 +149,9 @@ class ReactController extends Controller
         // если юзер авторизован, то сразу выходим и возвращаем код 200
         if ($session['user'] !== null) return $result;
 
+        // очень важный момент - результаты поисковых форм. пока признак наличие "=" в урле
+        if (strpos($path, '=')) return $result;
+
         //return $result; // на локале в режиме разработки иногда нужно вызвать страницу без ssr
 
         // check cache!
