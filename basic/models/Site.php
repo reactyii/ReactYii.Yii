@@ -34,7 +34,7 @@ class Site extends BaseModel
      * Дополнительная установка значений.
      * у самих сайтов не надо никаких доп значений, просто обнуляем установку site_id
      */
-    public static function setAdditionalValues(&$site, &$fields, &$lang, &$formData, $id)
+    public static function setAdditionalValues(&$session, &$fields, &$lang, &$formData, $id)
     {
     }
 
@@ -59,11 +59,11 @@ class Site extends BaseModel
         return Yii::$app->cache->getOrSet($key, function () use ($key, $host) {
             Yii::info("get. get from DB key=" . $key, __METHOD__);
 
-            $tmp = null;
-            $sites = self::getAll($tmp);
+            $session = [];
+            $sites = self::getAll($session);
             if (! $sites)
                 throw new \ErrorException('Sites not founded');
-            $site = $sites[0];
+            $session['site'] = $sites[0];
             if (sizeof($sites) > 1) {
                 foreach ($sites as $s) {
                     if (static::endsWith($host, $s['main_host'])) {
@@ -73,15 +73,15 @@ class Site extends BaseModel
                 }
             }
             // догружаем меню разделы, языки, менюшки
-            $site['langs'] = Language::getAll($site);
+            $session['site']['langs'] = Language::getAll($session);
             // 1. разделы и менюшки надо переводить 2. не всегда нужны все записи (тока не скрытые) и все колонки таблицы (оптимизируем сразу)
             //$site['sections'] = Section::getAll($site);
             //$site['menus'] = Menu::getAll($site);
-            $site['sections'] = Section::getFiltered($site, ['is_blocked' => 0]);
+            $session['site']['sections'] = Section::getFiltered($session, ['is_blocked' => 0]);
 
-            $site['lastModified'] = time(); // сохраним время генерации данных (пока не будем использовать updated_at из таблицы)
+            $session['site']['lastModified'] = time(); // сохраним время генерации данных (пока не будем использовать updated_at из таблицы)
 
-            return $site;
+            return $session;
         }, null, new TagDependency([
             'tags' => [
                 'sites',
@@ -95,7 +95,7 @@ class Site extends BaseModel
      *
      * @throws NotSupportedException.
      */
-    public static function getItemByField(&$site, $where, $whereParams, $uniqueWhereKey, $tags=[])
+    public static function getItemByField(&$session, $where, $whereParams, $uniqueWhereKey, $tags=[])
     {
         throw new NotSupportedException('Use ' . __CLASS__ . '::getSite($host) method instead.');
     }

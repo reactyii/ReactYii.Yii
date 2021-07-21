@@ -5,40 +5,52 @@ use app\components\Form;
 use Yii;
 use yii\caching\TagDependency;
 use yii\db\Exception;
+use yii\web\ServerErrorHttpException;
 
 abstract class BaseModel extends \yii\db\ActiveRecord
 {
-    public static function checkRights(&$site, &$formContent, $action = 'read')
+    public static function getSiteFromSession(&$session)
+    {
+        $site = $session !== null && isset($session['site']) ? $session['site'] : null;
+        if ($site === null) throw new \ErrorException('Site not defined');
+        return $site;
+    }
+
+    public static function checkRights(&$session, &$formContent, $action = 'read')
     {
         return true;
     }
 
     // ----------------------------------------------- SAVE
-    public static function checkForm(&$site, &$fields, &$lang, &$formData, &$errors)
+    public static function checkForm(&$session, &$fields, &$lang, &$formData, &$errors)
     {
+        //$site = $session !== null && isset($session['site']) ? $session['site'] : null;
         // блок тестирования отображения ошибок
         /*$errors[''] = ['text' => 'Error test'];
         $errors['name'] = ['title'=>'Название', 'text' => 'Поле обязательно для заполнения'];
         /**/
 
-        return Form::checkForm($site, $fields, $lang, $formData, $errors);
+        return Form::checkForm($session, $fields, $lang, $formData, $errors);
     }
 
     /*
      * Дополнительная установка значений, в частности site_id
      */
-    public static function setAdditionalValues(&$site, &$fields, &$lang, &$formData, $id)
+    public static function setAdditionalValues(&$session, &$fields, &$lang, &$formData, $id)
     {
+        $site = static::getSiteFromSession($session);
+
         if (!$id) // надо прописать доп переменные
         {
             $formData['site_id'] = $site['id'];
         }
     }
 
-    public static function editItem(&$site, &$lang, $id, &$formContent, &$get, &$post)
+    public static function editItem(&$session, &$lang, $id, &$formContent, &$get, &$post)
     {
+        $site = static::getSiteFromSession($session);
         // todo проверка прав доступа
-        if (!static::checkRights($site, $formContent, 'write')) {
+        if (!static::checkRights($session, $formContent, 'write')) {
             //$errors[''] = ['text' => 'Method not allowed'];
             // todo надо заменить форму сообщением, и елси юзер не авторизован, то признак что требуется авторизация
             $formContent = [
@@ -65,12 +77,12 @@ abstract class BaseModel extends \yii\db\ActiveRecord
             $errors = [];
 
             //Yii::info('-----------$fields=' . var_export($fields, true), __METHOD__);
-            if (static::checkForm($site, $fields, $lang, $formData, $errors)) { // все ок
+            if (static::checkForm($session, $fields, $lang, $formData, $errors)) { // все ок
 
                 // сохраняем в БД
                 //sleep(3); // отладка
 
-                static::setAdditionalValues($site, $fields, $lang, $formData, $id);
+                static::setAdditionalValues($session, $fields, $lang, $formData, $id);
                 $res = static::saveItem($id, $formData, $fields);
                 if ($res !== false) {
                     // замещаем ед контента
@@ -109,7 +121,7 @@ abstract class BaseModel extends \yii\db\ActiveRecord
         } else { // читаем данные из БД
             $formData = $get;
             if ($id !== '0') { // грузим данные из БД
-                $formData = static::getItemById($site, $id);
+                $formData = static::getItemById($session, $id);
             } else {
                 $formData['id'] = '0';
             }
@@ -228,8 +240,9 @@ abstract class BaseModel extends \yii\db\ActiveRecord
         'id' => SORT_ASC
     ];
 
-    protected static function getAllWhere(&$site)
+    protected static function getAllWhere(&$session)
     {
+        $site = $session !== null && isset($session['site']) ? $session['site'] : null;
         return $site != null ? [
             'site_id' => $site['id'],
             'is_blocked' => 0
@@ -241,8 +254,10 @@ abstract class BaseModel extends \yii\db\ActiveRecord
         return trim(static::tableName(), '%{}'); // вот так короче будет для наших целей
     }
 
-    public static function getAllForSelect(&$site, $parent = null, $fNameForValue = 'id', $fNameForTitle = 'name', $parentName = 'parent_id')
+    public static function getAllForSelect(&$session, $parent = null, $fNameForValue = 'id', $fNameForTitle = 'name', $parentName = 'parent_id')
     {
+        //$site = $session !== null && isset($session['site']) ? $session['site'] : null;
+        $site = static::getSiteFromSession($session);
         $key = implode('-', [
             $site != null ? $site['id'] : '',
             $parent != null ? $parent : '',
@@ -250,7 +265,7 @@ abstract class BaseModel extends \yii\db\ActiveRecord
             static::getCacheBaseKey(),
             __FUNCTION__
         ]);
-        return Yii::$app->cache->getOrSet($key, function () use ($key, $site, $parent, $fNameForValue, $fNameForTitle, $parentName) {
+        return Yii::$app->cache->getOrSet($key, function () use ($key, $site, $session, $parent, $fNameForValue, $fNameForTitle, $parentName) {
             Yii::info("getAllForSelect. get from DB key=" . $key, __METHOD__);
             $where = $site != null ? [
                 'site_id' => $site['id'],
@@ -268,7 +283,7 @@ abstract class BaseModel extends \yii\db\ActiveRecord
                 $list[$k]['path'] = $v[$fNameForValue];
                 $list[$k]['type'] = 'option';
                 if ($parentName != null) {
-                    $list[$k]['childs'] = static::getAllForSelect($site, $v[$fNameForValue], $fNameForValue, $fNameForTitle, $parentName);
+                    $list[$k]['childs'] = static::getAllForSelect($session, $v[$fNameForValue], $fNameForValue, $fNameForTitle, $parentName);
                 }
             }
 
@@ -281,8 +296,9 @@ abstract class BaseModel extends \yii\db\ActiveRecord
         ]));
     }
 
-    public static function getAll(&$site)
+    public static function getAll(&$session)
     {
+        $site = $session !== null && isset($session['site']) ? $session['site'] : null;
         $key = implode('-', [
             $site != null ? $site['id'] : '',
             static::getCacheBaseKey(),
@@ -290,33 +306,35 @@ abstract class BaseModel extends \yii\db\ActiveRecord
         ]);
         Yii::info("getAll. key=" . $key, __METHOD__);
 
-        return Yii::$app->cache->getOrSet($key, function () use ($key, $site) {
+        return Yii::$app->cache->getOrSet($key, function () use ($key, $site, $session) {
             Yii::info("getAll. get from DB key=" . $key, __METHOD__);
 
-            return self::find()->where(static::getAllWhere($site))
+            return self::find()->where(static::getAllWhere($session))
                 ->orderBy(static::$getAllOrderBy)
                 ->asArray()
                 ->all();
         }, null, new TagDependency([
             'tags' => [
-                'site-' . $site['id'],
-                static::getCacheBaseKey() . '-' . $site['id']
+                'site-' . ($site != null ? $site['id'] : ''),
+                static::getCacheBaseKey() . '-' . ($site != null ? $site['id'] : '')
             ]
         ]));
     }
 
-    public static function getItemByPage(&$site, $page, $tags = [])
+    public static function getItemByPage(&$session, $page, $tags = [])
     {
-        return static::getItemByField($site, ['page=:page'], [':page' => $page], 'page=' . $page, $tags);
+        return static::getItemByField($session, ['page=:page'], [':page' => $page], 'page=' . $page, $tags);
     }
 
-    public static function getItemById(&$site, $id, $tags = [])
+    public static function getItemById(&$session, $id, $tags = [])
     {
-        return static::getItemByField($site, ['id=:id'], [':id' => $id], 'id=' . $id, $tags);
+        return static::getItemByField($session, ['id=:id'], [':id' => $id], 'id=' . $id, $tags);
     }
 
-    public static function getItemByField(&$site, $where, $whereParams, $uniqueWhereKey, $tags = [])
+    public static function getItemByField(&$session, $where, $whereParams, $uniqueWhereKey, $tags = [])
     {
+        //$site = $session !== null && isset($session['site']) ? $session['site'] : null;
+        $site = static::getSiteFromSession($session);
         //$_key_where = [];
         /*$_where = ['site_id' => $site['id']]; // это нужно для всех сущностей (кроме самого сайта, н осайт мы ресолвим по своей функцией)
         foreach($where as $k=>$v)
@@ -332,7 +350,7 @@ abstract class BaseModel extends \yii\db\ActiveRecord
             __FUNCTION__
         ]);
 
-        return Yii::$app->cache->getOrSet($key, function () use ($key, $site, $where, $whereParams) {
+        return Yii::$app->cache->getOrSet($key, function () use ($key, $site, $session, $where, $whereParams) {
             Yii::info("getItem. get from DB key=" . $key, __METHOD__);
             $query = static::find()->where(['site_id' => $site['id']]);
             foreach ($where as $w) {

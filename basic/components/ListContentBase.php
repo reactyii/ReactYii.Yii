@@ -56,11 +56,11 @@ abstract class ListContentBase extends BaseObject
         return $query;
     }
 
-    abstract function getContentForList(&$site, &$lang, &$section, &$page, $listContent, &$content_args, &$get = null, &$post = null, $offset = 0, $limit = null, $item = null, $recursion_level = 0);
+    abstract function getContentForList(&$session, &$lang, &$section, &$page, $listContent, &$content_args, &$get = null, &$post = null, $offset = 0, $limit = null, $item = null, $recursion_level = 0);
 
-    abstract function getContentForListFilter(&$site, &$lang, &$section, &$page, $listContent, &$content_args);
+    abstract function getContentForListFilter(&$session, &$lang, &$section, &$page, $listContent, &$content_args);
 
-    function getContentForItemEdit(&$site, &$lang, &$section, &$page, $listContent, &$get, &$post)
+    function getContentForItemEdit(&$session, &$lang, &$section, &$page, $listContent, &$get, &$post)
     {
         return false;
     }

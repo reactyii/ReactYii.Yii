@@ -1,6 +1,7 @@
 <?php
 
 namespace app\components;
+use app\models\BaseModel;
 use yii;
 use app\models\Content;
 use yii\base\BaseObject;
@@ -90,8 +91,9 @@ class Form extends BaseObject
         }
     }
 
-    public static function checkForm(&$site, &$fields, &$lang, &$formData, &$errors)
+    public static function checkForm(&$session, &$fields, &$lang, &$formData, &$errors)
     {
+        //$site = BaseModel::getSiteFromSession($session);
         foreach ($formData as $name => $value) { // пробегаем именно по входящим данным, здесь мы приводим типы, подготавливаем строки
             if (!isset($fields[$name])) // уберем все что не в форме (лишнее)
             {

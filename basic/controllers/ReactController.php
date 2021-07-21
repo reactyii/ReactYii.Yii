@@ -1,6 +1,7 @@
 <?php
 namespace app\controllers;
 
+use app\models\BaseModel;
 use Yii;
 use yii\filters\AccessControl;
 use yii\web\Controller;
@@ -55,7 +56,8 @@ class ReactController extends Controller
         Yii::info('continue afterCORS', __METHOD__);
 
         $host = null;
-        $site = Site::getSite($host);
+        $session = Site::getSite($host); // по сути тут инициализируем сессию вернется сессия с найденным сайтом
+        $session['user'] = null; // грузим данные юзера
 
         if ($request->isAjax) {
             $_get = $request->get();
@@ -69,9 +71,9 @@ class ReactController extends Controller
 
             $post = $request->isPost ? $request->post() : null;
 
-            list ($lang, $section, $page, $content) = $this->parsePath($site, $path, $get, $post);
-            //$site['sections'] = Section::getFilteredTree($site, $lang, ['is_blocked' => 0]);
-            $site['menus'] = Menu::getFilteredTree($site, $lang, ['is_blocked' => 0]);
+            list ($lang, $section, $page, $content) = $this->parsePath($session, $path, $get, $post);
+
+            $session['site']['menus'] = Menu::getFilteredTree($session, $lang, ['is_blocked' => 0]);
 
             // sleep(3); // отладка
             //Yii::info('prepare json data for page', __METHOD__);
@@ -88,15 +90,17 @@ class ReactController extends Controller
             ];
             $page['seo'] = $seo;
             // $page['requestedpath'] = '/' . $path; // это не нужно. на фронте запрашиваемый путь передается в колбэке запроса (через замыкание)
-            $session = [];
+            $_session = [];
             $siteLM = $request->get('__siteLM');
-            //Yii::info('__siteLM=[' . $siteLM . '] site[lastModified]=' . $site['lastModified'], __METHOD__);
-            if (!$siteLM || $siteLM < $site['lastModified']) {
-                $session['site'] = $site;
+            //Yii::info('__siteLM=[' . $siteLM . '] site[lastModified]=' . $session['site']['lastModified'], __METHOD__);
+            // todo надо учесть время изменения юзера также как и сайта!!!
+            if (!$siteLM || $siteLM < $session['site']['lastModified']) {
+                //$_session['site'] = $session['site'];
+                $_session = $session;
                 // Yii::info('send session', __METHOD__);
             }
-            if ($session)
-                $page['session'] = $session;
+            if ($_session)
+                $page['session'] = $_session;
 
             $page['section'] = $section;
             $page['lang'] = $lang;
@@ -109,7 +113,7 @@ class ReactController extends Controller
         Yii::info('render only react container', __METHOD__);
 
         // SSR
-        $data = $this->setSSR($site, $path);
+        $data = $this->setSSR($session, $path);
 
         switch ($data['status']) {
             case 404:
@@ -133,20 +137,19 @@ class ReactController extends Controller
      *
      * @return array
      */
-    private function setSSR(&$site, $path)
+    private function setSSR(&$session, $path)
     {
+        $site = BaseModel::getSiteFromSession($session);
         $result = [
             'status' => 200,
             'content' => '<noscript>You need to enable JavaScript to run this app.</noscript><div id="root"></div>',
             'header' => ''
         ];
 
-        if (false) // если юзер авторизован, то сразу выходим и возвращаем код 200
-        {
-            return $result;
-        }
+        // если юзер авторизован, то сразу выходим и возвращаем код 200
+        if ($session['user'] !== null) return $result;
 
-        return $result; // на локале в режиме разработки иногда нужно вызвать страницу без ssr
+        //return $result; // на локале в режиме разработки иногда нужно вызвать страницу без ssr
 
         // check cache!
 
@@ -157,7 +160,7 @@ class ReactController extends Controller
         ]);
         Yii::info("setSSR. cachekey=" . $key, __METHOD__);
 
-        return Yii::$app->cache->getOrSet($key, function () use ($key, $site, $path, $result) {
+        return Yii::$app->cache->getOrSet($key, function () use ($key, $site, $session, $path, $result) {
             Yii::info("eval setSSR for cachekey=" . $key, __METHOD__);
 
             $ssr_path = rtrim(Yii::getAlias('@reactSSR'), '/\\');
@@ -273,8 +276,9 @@ class ReactController extends Controller
      * @return string
      * @throws \yii\web\NotFoundHttpException
      */
-    private function parsePath(&$site, $path, &$get, &$post)
+    private function parsePath(&$session, $path, &$get, &$post)
     {
+        $site = BaseModel::getSiteFromSession($session);
         /*if ($post) {
             Yii::info('=====> post[' . $path . ']=' . var_export($post, true), __METHOD__);
         }/**/
@@ -312,7 +316,7 @@ class ReactController extends Controller
         // 3. разделы
         if (sizeof($parts) > 0) {
             if ($parts[0] === '') throw new \yii\web\NotFoundHttpException();
-            $section = Section::getItemByPath($site, $parts[0]);
+            $section = Section::getItemByPath($session, $parts[0]);
             if ($section) {
                 array_shift($parts);
             }
@@ -329,7 +333,7 @@ class ReactController extends Controller
         if ($page_path === '') $page_path = 'index';
 
         //Yii::info('=====> $page_path=' . $page_path, __METHOD__);
-        $page = Menu::getItemBySectionPage($site, $section, $page_path);
+        $page = Menu::getItemBySectionPage($session, $section, $page_path);
         //Yii::info("=====> page=" . var_export($page, true), __METHOD__);
         if (!$page)
         {
@@ -337,7 +341,7 @@ class ReactController extends Controller
         }
 
         // еще надо заполнить контентом
-        $content = Content::getContentForPage($site, $lang, $section, $page, $parts, $get, $post);
+        $content = Content::getContentForPage($session, $lang, $section, $page, $parts, $get, $post);
         //Yii::info('=====> $content[' . $path . ']=' . var_export($content, true), __METHOD__);
 
         return [

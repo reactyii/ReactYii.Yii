@@ -41,7 +41,7 @@ use yii\caching\TagDependency;
 class Menu extends BaseModel
 {
 
-    /*public static function getAll(&$site)
+    /*public static function getAll(&$session)
     {
         $key = implode('-', [
             $site['id'],
@@ -71,8 +71,10 @@ class Menu extends BaseModel
         ]));
     }/**/
 
-    public static function getAllForSelect(&$site, $parent = null, $fNameForValue = 'id', $fNameForTitle = 'name', $parentName = 'parent_id')
+    public static function getAllForSelect(&$session, $parent = null, $fNameForValue = 'id', $fNameForTitle = 'name', $parentName = 'parent_id')
     {
+        //$site = $session !== null && isset($session['site']) ? $session['site'] : null;
+        $site = static::getSiteFromSession($session);
         $key = implode('-', [
             $site != null ? $site['id'] : '',
             $parent != null ? $parent : '',
@@ -80,7 +82,7 @@ class Menu extends BaseModel
             static::getCacheBaseKey(),
             __FUNCTION__
         ]);
-        return Yii::$app->cache->getOrSet($key, function () use ($key, $site, $parent, $fNameForValue, $fNameForTitle, $parentName) {
+        return Yii::$app->cache->getOrSet($key, function () use ($key, $site, $session, $parent, $fNameForValue, $fNameForTitle, $parentName) {
             Yii::info("getAll. get from DB key=" . $key, __METHOD__);
             $where = $site != null ? [
                 static::tableName() . '.' . 'site_id' => $site['id'],
@@ -103,7 +105,7 @@ class Menu extends BaseModel
                 $list[$k]['type'] = 'option';
                 if ($v['section']) $list[$k]['content'] = $list[$k]['content'] . '('.$v['section'].')';
                 if ($parentName != null) {
-                    $list[$k]['childs'] = static::getAllForSelect($site, $v[$fNameForValue], $fNameForValue, $fNameForTitle, $parentName);
+                    $list[$k]['childs'] = static::getAllForSelect($session, $v[$fNameForValue], $fNameForValue, $fNameForTitle, $parentName);
                 }
             }
 
@@ -120,10 +122,12 @@ class Menu extends BaseModel
      * Готовим дерево меню для сайта
      *
      */
-    public static function getFilteredTree(&$site, &$lang, $filter = [])
+    public static function getFilteredTree(&$session, &$lang, $filter = [])
     {
+        //$site = $session !== null && isset($session['site']) ? $session['site'] : null;
+        $site = static::getSiteFromSession($session);
         $_key = [
-            $site != null ? $site['id'] : '',
+            $site['id'],
             $lang ? $lang['id'] : '',
         ];
         foreach ($filter as $k => $v)
@@ -135,7 +139,7 @@ class Menu extends BaseModel
         $key = implode('-', $_key);
         Yii::info("getFilteredTree. key=" . $key, __METHOD__);
 
-        $menu = Yii::$app->cache->getOrSet($key, function () use ($key, $site, $lang, $filter) {
+        $menu = Yii::$app->cache->getOrSet($key, function () use ($key, $site, $session, $lang, $filter) {
             Yii::info("getFilteredTree. get from DB key=" . $key, __METHOD__);
             $filter['site_id'] = $site['id'];
 
@@ -177,8 +181,10 @@ class Menu extends BaseModel
      * Делаем поиск страницы с по урлу с учетом раздела
      *
      */
-    public static function getItemBySectionPage(&$site, $section, $page_path, $tags=[])
+    public static function getItemBySectionPage(&$session, $section, $page_path, $tags=[])
     {
+        //$site = $session !== null && isset($session['site']) ? $session['site'] : null;
+        $site = static::getSiteFromSession($session);
         $where = ['path=:page', 'is_blocked=0'];
         $key = 'path=' . $page_path . ',is_blocked=0';
         $whereParams = [':page' => $page_path];
@@ -215,7 +221,7 @@ class Menu extends BaseModel
             }
         }
 
-        return static::getItemByField($site, $where, $whereParams, $key, $tags);
+        return static::getItemByField($session, $where, $whereParams, $key, $tags);
     }
 
     // -------------------------------------------- auto generated -------------------------

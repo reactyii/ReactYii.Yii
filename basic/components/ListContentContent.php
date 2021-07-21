@@ -1,6 +1,7 @@
 <?php
 
 namespace app\components;
+use app\models\BaseModel;
 use app\models\Template;
 use yii;
 use app\models\Content;
@@ -36,7 +37,7 @@ class ListContentContent extends ListContentBase
     }/**/
 
     /*
-    function getContentForItemEdit(&$site, &$lang, &$section, &$page, $listContent, &$get, &$post)
+    function getContentForItemEdit(&$session, &$lang, &$section, &$page, $listContent, &$get, &$post)
     {
         $pageOptions = Menu::getAllForSelect($site, null, 'id', 'menu_name');
         array_unshift($pageOptions, ['id' => 0, 'path' => '', 'content' => 'Выберите страницу', 'type' => 'option']);
@@ -88,8 +89,9 @@ class ListContentContent extends ListContentBase
         return $form;
     }
     /**/
-    public function getContentForListFilter(&$site, &$lang, &$section, &$page, $listContent, &$content_args)
+    public function getContentForListFilter(&$session, &$lang, &$section, &$page, $listContent, &$content_args)
     {
+        //$site = BaseModel::getSiteFromSession($session);
         //$pageOptions = Menu::getAllForSelect($site, null, 'id', 'menu_name');
         //array_unshift($pageOptions, ['id' => 0, 'path' => '', 'content' => 'Выберите страницу', 'type' => 'option']);
         $pageOptions = [
@@ -97,7 +99,7 @@ class ListContentContent extends ListContentBase
                 'id' => '',
                 'path' => '',
                 'content' => 'Выберите страницу',
-                'childs' => Menu::getAllForSelect($site, null, 'id', 'menu_name'),
+                'childs' => Menu::getAllForSelect($session, null, 'id', 'menu_name'),
                 'type' => 'option'
             ]
         ];
@@ -152,7 +154,7 @@ class ListContentContent extends ListContentBase
         return $form;
     }
 
-    public function getContentForEditForm(&$site, &$lang, &$section, &$page, $listContent)
+    public function getContentForEditForm(&$session, &$lang, &$section, &$page, $listContent)
     {
         //$pageOptions = Menu::getAllForSelect($site, null, 'id', 'menu_name');
         //array_unshift($pageOptions, ['id' => 0, 'path' => '', 'content' => 'Выберите страницу', 'type' => 'option']);
@@ -161,7 +163,7 @@ class ListContentContent extends ListContentBase
                 'id' => '',
                 'path' => '',
                 'content' => 'Самый верхний уровень',
-                'childs' => Menu::getAllForSelect($site, null, 'id', 'menu_name'),
+                'childs' => Menu::getAllForSelect($session, null, 'id', 'menu_name'),
                 'type' => 'option'
             ]
         ];
@@ -172,7 +174,7 @@ class ListContentContent extends ListContentBase
                 'id' => '',
                 'path' => '',
                 'content' => 'Самый верхний уровень',
-                'childs' => Content::getAllForSelect($site, null, 'id', 'name'),
+                'childs' => Content::getAllForSelect($session, null, 'id', 'name'),
                 'type' => 'option'
             ]
         ];
@@ -247,8 +249,9 @@ class ListContentContent extends ListContentBase
     /**
      * @throws yii\web\NotFoundHttpException
      */
-    function getContentForList(&$site, &$lang, &$section, &$page, $listContent, &$content_args, &$get = null, &$post = null, $offset=0, $limit=null, $item = null, $recursion_level = 0)
+    function getContentForList(&$session, &$lang, &$section, &$page, $listContent, &$content_args, &$get = null, &$post = null, $offset=0, $limit=null, $item = null, $recursion_level = 0)
     {
+        $site = BaseModel::getSiteFromSession($session);
         //Yii::info('!!!-----------!!!!!!!!!', __METHOD__);
         //return [[], 0];
         //$count = null;
@@ -272,7 +275,7 @@ class ListContentContent extends ListContentBase
         if ($item === null) {
             //------------------------------------- сам список
             // добавим фильтр в список
-            $formFilterContent = $this->getContentForListFilter($site, $lang, $section, $page, $listContent, $content_args);
+            $formFilterContent = $this->getContentForListFilter($session, $lang, $section, $page, $listContent, $content_args);
             //Yii::info('-----------$formFilterContent=' . var_export($formFilterContent, true), __METHOD__);
 
             $fields = [];
@@ -368,10 +371,10 @@ class ListContentContent extends ListContentBase
                 $id = array_shift($content_args);
 
                 //$list = null;
-                $form = $this->getContentForEditForm($site, $lang, $section, $page, $listContent);
+                $form = $this->getContentForEditForm($session, $lang, $section, $page, $listContent);
                 //Yii::info('-----------$formFilterContent=' . var_export($formFilterContent, true), __METHOD__);
 
-                Content::editItem($site, $lang, $id, $form, $get, $post);
+                Content::editItem($session, $lang, $id, $form, $get, $post);
 
                 // NB! снаружи если $item !== null, ожидается один элемент, которые замещает элемент список
                 if (sizeof($form) === 1) {

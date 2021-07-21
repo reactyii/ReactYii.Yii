@@ -64,8 +64,10 @@ class Content extends BaseModel
      * @throws ServerErrorHttpException
      * @throws \yii\web\NotFoundHttpException
      */
-    public static function getContentForList(&$site, &$lang, &$section, &$page, $listContent, &$content_args, &$get, &$post, $offset, $limit, $item = null, $recursion_level = 0)
+    public static function getContentForList(&$session, &$lang, &$section, &$page, $listContent, &$content_args, &$get, &$post, $offset, $limit, $item = null, $recursion_level = 0)
     {
+        //$site = $session !== null && isset($session['site']) ? $session['site'] : null;
+        $site = static::getSiteFromSession($session);
         // в кеш не загоняем так как мы загоним в кеш все узлы контента для страницы
 
         // сильно выпадать по ошибке не будем, ибо что-то мы сможем показать юзеру более менее корректно. но результат нужно вернуть корерктный!
@@ -80,7 +82,7 @@ class Content extends BaseModel
                 throw new ServerErrorHttpException($mess);
             }
 
-            return static::$_list[$listContent['model']]->getContentForList($site, $lang, $section, $page, $listContent, $content_args, $get, $post, $offset, $limit, $item, $recursion_level);
+            return static::$_list[$listContent['model']]->getContentForList($session, $lang, $section, $page, $listContent, $content_args, $get, $post, $offset, $limit, $item, $recursion_level);
         }
 
         $count = null;
@@ -137,7 +139,7 @@ class Content extends BaseModel
             static::json_decode_list($list, ['content_keys_json' => 'content_keys', 'settings_json' => 'settings', 'template_settings_json' => 'template_settings']);
 
             foreach ($list as $k => $v) {
-                $list[$k]['childs'] = static::getContentForPage($site, $lang, $section, $page, $content_args, $get, $post, $v['id'], $recursion_level + 1);
+                $list[$k]['childs'] = static::getContentForPage($session, $lang, $section, $page, $content_args, $get, $post, $v['id'], $recursion_level + 1);
             }
         } else if (strpos($item, '__') === 0) {
             $action = array_shift($content_args);
@@ -165,7 +167,7 @@ class Content extends BaseModel
 
             static::json_decode_item($list, ['content_keys_json' => 'content_keys', 'settings_json' => 'settings', 'template_settings_json' => 'template_settings']);
 
-            $list['childs'] = static::getContentForPage($site, $lang, $section, $page, $content_args, $get, $post, $list['id'], $recursion_level + 1);
+            $list['childs'] = static::getContentForPage($session, $lang, $section, $page, $content_args, $get, $post, $list['id'], $recursion_level + 1);
         }
 
         return [$list, $count];
@@ -196,8 +198,9 @@ class Content extends BaseModel
      * Готовим список единиц контента для страницы.
      *
      */
-    public static function getContentForPage(&$site, &$lang, &$section, &$page, &$content_args, &$get=null, &$post=null, $parent_id = null, $recursion_level = 0)
+    public static function getContentForPage(&$session, &$lang, &$section, &$page, &$content_args, &$get=null, &$post=null, $parent_id = null, $recursion_level = 0)
     {
+        $site = $session !== null && isset($session['site']) ? $session['site'] : null;
         // сильно выпадать по ошибке не будем, ибо что-то мы сможем показать юзеру более менее корректно
         if (!static::checkRecursionLevel($recursion_level)) return [];
 
@@ -214,7 +217,7 @@ class Content extends BaseModel
         Yii::info("getContentForPage. key=" . $key, __METHOD__);
 
         //$contentList = Yii::$app->cache->getOrSet($key, function () use ($key, $site, $lang, $page, $section, $content_args, $parent_id, $recursion_level, $get, $post) {
-        $f = function () use ($key, $site, $lang, $page, $section, $content_args, $parent_id, $recursion_level, $get, $post) {
+        $f = function () use ($key, $site, $session, $lang, $page, $section, $content_args, $parent_id, $recursion_level, $get, $post) {
             Yii::info("getContentForPage. get from DB key=" . $key, __METHOD__);
 
             $query = self::find()
@@ -281,7 +284,7 @@ class Content extends BaseModel
 
                             if (ctype_digit($content_args[0])) { // не будем вводить лишних сущностей и слов в путь. если число то считаем его номеров страницы, если строка то это path единицы списка
                                 $cur_page = array_shift($content_args);
-                                list($_listDatas, $total_rows) = static::getContentForList($site, $lang, $section, $page, $c, $content_args, $get, $post, $cur_page * $per_page, $per_page);
+                                list($_listDatas, $total_rows) = static::getContentForList($session, $lang, $section, $page, $c, $content_args, $get, $post, $cur_page * $per_page, $per_page);
                                 //$listDatas += $_listDatas;
                                 $list[$k]['childs'] = $_listDatas;
                                 $list[$k]['settings']['per_page'] = $per_page;
@@ -301,7 +304,7 @@ class Content extends BaseModel
                                 // else {}
                             }*/ else {
                                 $item = array_shift($content_args);
-                                list($_listItem, $total_rows) = static::getContentForList($site, $lang, $section, $page, $c, $content_args, $get, $post, null, null, $item, $recursion_level + 1);
+                                list($_listItem, $total_rows) = static::getContentForList($session, $lang, $section, $page, $c, $content_args, $get, $post, null, null, $item, $recursion_level + 1);
 
                                 // а вот тут мы должны заменить? сам список элементом - НЕТ.
                                 // здесь мы должны
@@ -325,7 +328,7 @@ class Content extends BaseModel
                             }
                         } else { // заполняем первую страницу
                             $not_used_content_args = []; // так как передаем по ссылке, то сосздадим фэйковый пустой массив аргументов
-                            list($_listDatas, $total_rows) = static::getContentForList($site, $lang, $section, $page, $c, $not_used_content_args, $get, $post, 0, $per_page, null, $recursion_level + 1);
+                            list($_listDatas, $total_rows) = static::getContentForList($session, $lang, $section, $page, $c, $not_used_content_args, $get, $post, 0, $per_page, null, $recursion_level + 1);
                             //$listDatas += $_listDatas;
                             $list[$k]['childs'] = $_listDatas;
                             $list[$k]['settings']['per_page'] = $per_page;
@@ -333,7 +336,7 @@ class Content extends BaseModel
                             $list[$k]['settings']['cur_page'] = 0;
                         }
                     } else {
-                        $list[$k]['childs'] = static::getContentForPage($site, $lang, $section, $page, $content_args, $get, $post, $c['id'], $recursion_level + 1);
+                        $list[$k]['childs'] = static::getContentForPage($session, $lang, $section, $page, $content_args, $get, $post, $c['id'], $recursion_level + 1);
                     }
                 }
 

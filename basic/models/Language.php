@@ -29,7 +29,7 @@ class Language extends BaseModel
         'id' => SORT_ASC
     ];
 
-    /*public static function getAll(&$site)
+    /*public static function getAll(&$session)
     {
         $key = implode('-', [
             $site['id'],

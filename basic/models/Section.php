@@ -36,17 +36,19 @@ class Section extends BaseModel
      * Делаем поиск страницы с по урлу с учетом раздела
      *
      */
-    public static function getItemByPath(&$site, $path)
+    public static function getItemByPath(&$session, $path)
     {
-        return Section::getItemByField($site, ['path=:path', 'is_blocked=0'], [':path' => $path], 'path=' . $path . ',is_blocked=0');
+        return Section::getItemByField($session, ['path=:path', 'is_blocked=0'], [':path' => $path], 'path=' . $path . ',is_blocked=0');
     }
 
     /**
      * Готовим дерево меню для сайта
      *
      */
-    public static function getFiltered(&$site, $filter = [])
+    public static function getFiltered(&$session, $filter = [])
     {
+        //$site = $session !== null && isset($session['site']) ? $session['site'] : null;
+        $site = static::getSiteFromSession($session);
         $_key = [
             $site != null ? $site['id'] : '',
             // пока преводить нечего
@@ -61,7 +63,7 @@ class Section extends BaseModel
         $key = implode('-', $_key);
         Yii::info("getFilteredTree. key=" . $key, __METHOD__);
 
-        $menu = Yii::$app->cache->getOrSet($key, function () use ($key, $site, $filter) {
+        $menu = Yii::$app->cache->getOrSet($key, function () use ($key, $site, $session, $filter) {
             Yii::info("getFilteredTree. get from DB key=" . $key, __METHOD__);
             $filter['site_id'] = $site['id'];
 
