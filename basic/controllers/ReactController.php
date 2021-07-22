@@ -59,6 +59,8 @@ class ReactController extends Controller
         $session = Site::getSite($host); // по сути тут инициализируем сессию вернется сессия с найденным сайтом
         $session['user'] = null; // грузим данные юзера
 
+        $post = $request->isPost ? $request->post() : null;
+
         if ($request->isAjax) {
             $_get = $request->get();
             $get = [];
@@ -68,8 +70,6 @@ class ReactController extends Controller
                 $get[$k] = $v;
             }
             //$get = null; // для тестирования условия
-
-            $post = $request->isPost ? $request->post() : null;
 
             list ($lang, $section, $page, $content) = $this->parsePath($session, $path, $get, $post);
 
@@ -112,8 +112,23 @@ class ReactController extends Controller
 
         Yii::info('render only react container', __METHOD__);
 
-        // SSR
-        $data = $this->setSSR($session, $path);
+        // пост запросы тока в аякс режиме!
+        if ($post !== null) throw new \yii\web\NotFoundHttpException();
+
+        if (strpos($path, '=')) { // признак посиковой формы (наличие get)
+            $get = $request->get(); // в случае не аякс запроса никаких системных пременных в урлах быть не должно!
+
+            // решение конечно не айс. так как мы дважды разбираем путь и делаем поиск контента, НО при включенном кешировании это допустимо
+            // также в эту ветку мы зайдем если юзер в поиске нажмет "F5" для обновления страницы и такое должно происходить редко - ожидание
+            list ($lang, $section, $page, $content) = $this->parsePath($session, $path, $get, $post);
+            // если такой страницы на сайте нет то parsePath выкинет 404, а если мы прошли то значит вернем корректную страницу, но без SSR
+
+            $data = $this->getDefaultSSRContent($session, $path);
+        }
+        else {
+            // SSR
+            $data = $this->setSSR($session, $path);
+        }
 
         switch ($data['status']) {
             case 404:
@@ -132,6 +147,14 @@ class ReactController extends Controller
         }
     }
 
+    private function getDefaultSSRContent(&$session, $path) {
+        return [
+            'status' => 200,
+            'content' => '<noscript>You need to enable JavaScript to run this app.</noscript><div id="root"></div>',
+            'header' => ''
+        ];
+    }
+
     /**
      * Устанавливаем данные от серверного рендера (если они есть и если нужно)
      *
@@ -140,17 +163,15 @@ class ReactController extends Controller
     private function setSSR(&$session, $path)
     {
         $site = BaseModel::getSiteFromSession($session);
-        $result = [
-            'status' => 200,
-            'content' => '<noscript>You need to enable JavaScript to run this app.</noscript><div id="root"></div>',
-            'header' => ''
-        ];
+        $result = $this->getDefaultSSRContent($session, $path);
 
         // если юзер авторизован, то сразу выходим и возвращаем код 200
         if ($session['user'] !== null) return $result;
 
         // очень важный момент - результаты поисковых форм. пока признак наличие "=" в урле
-        if (strpos($path, '=')) return $result;
+        // плохой вариант! так как если в урле есть "=" то 404 не будет никогда, а это плохо
+        // РЕШЕНИЕ! выносим эту проверку до входа в SSR и если в урле есть "=" то будем парсить урл
+        //if (strpos($path, '=')) return $result;
 
         //return $result; // на локале в режиме разработки иногда нужно вызвать страницу без ssr
 
