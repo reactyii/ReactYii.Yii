@@ -67,7 +67,7 @@ class Site extends BaseModel
             if (sizeof($sites) > 1) {
                 foreach ($sites as $s) {
                     if (static::endsWith($host, $s['main_host'])) {
-                        $site = $s;
+                        $session['site'] = $s;
                         break;
                     }
                 }

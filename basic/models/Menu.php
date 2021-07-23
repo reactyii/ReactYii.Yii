@@ -224,6 +224,38 @@ class Menu extends BaseModel
         return static::getItemByField($session, $where, $whereParams, $key, $tags);
     }
 
+
+    /**
+     * Формируем единицы контента из меню
+     * @param $session
+     */
+    public static function getContentFromMenu(&$session, &$menu)
+    {
+        $content = [];
+        foreach ($menu as $_item) {
+            $item = ($_item['menu_id']) ? Menu::getItemById($session, $_item['menu_id']) : $_item;
+            $content[] = [
+                'id' => $_item['id'],  // с исходного элемента!
+                'content' => '',
+                'type' => 'link',
+                'content_keys' => $_item['content_keys'], // с исходного элемента!
+                'settings' => [
+                    'menu_name' => $_item['menu_name'], // название в ссылке возьмем с иходного элемента
+                    // может быть что то еще взять с исходного элемента ? надо подумать
+                    'is_all_section' => $item['is_all_section'],
+                    'is_current_section' => $item['is_current_section'],
+                    'path' => $item['path'],
+                    //'' => $item[''],
+                    //'' => $item[''],
+                    'url' => $_item['url'], // внешний урл. с исходного элемента! так как это первое проверяем и если оно не пусто то сразу лепим внешний линк
+
+                ],
+                'childs' => $item['childs'] ? static::getContentFromMenu($session, $item['childs']) : [],
+            ];
+        }
+        return $content;
+    }
+
     // -------------------------------------------- auto generated -------------------------
 
     /**

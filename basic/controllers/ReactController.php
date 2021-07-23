@@ -75,6 +75,12 @@ class ReactController extends Controller
 
             $session['site']['menus'] = Menu::getFilteredTree($session, $lang, ['is_blocked' => 0]);
 
+            $menusContent = Menu::getContentFromMenu($session, $session['site']['menus']);
+            // заменить на https://www.php.net/manual/ru/function.array-merge.php
+            foreach($menusContent as $c) {
+                $content[] = $c;
+            }
+
             // sleep(3); // отладка
             //Yii::info('prepare json data for page', __METHOD__);
             if ($path == '404.html') {
@@ -367,6 +373,9 @@ class ReactController extends Controller
         // еще надо заполнить контентом
         $content = Content::getContentForPage($session, $lang, $section, $page, $parts, $get, $post);
         //Yii::info('=====> $content[' . $path . ']=' . var_export($content, true), __METHOD__);
+
+        // дополним контент менюшками! снаружи! так как данная фнукция используется и для парсинга поисковых форм
+
 
         return [
             $lang,
