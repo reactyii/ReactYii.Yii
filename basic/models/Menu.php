@@ -144,7 +144,7 @@ class Menu extends BaseModel
             $filter['site_id'] = $site['id'];
 
             $query = self::find()
-                ->select('id, path, parent_id, name, menu_name, is_all_section, is_current_section, section_id, content_keys_json')
+                ->select('id, path, parent_id, name, menu_name, is_all_section, is_current_section, section_id, menu_id, content_keys_json')
                 ->from(static::tablename())
                 ->where($filter);
 
