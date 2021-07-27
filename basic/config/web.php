@@ -30,7 +30,7 @@ $config = [
             'enableAutoLogin' => true
         ],
         'errorHandler' => [
-            'errorAction' => 'site/error'
+            'errorAction' => 'react/error'
             // 'errorAction' => 'main/index',
         ],
         'mailer' => [

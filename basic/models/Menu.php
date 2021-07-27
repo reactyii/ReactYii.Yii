@@ -4,6 +4,7 @@ namespace app\models;
 use Yii;
 use yii\base\BaseObject;
 use yii\caching\TagDependency;
+use yii\helpers\Html;
 
 /**
  * This is the model class for table "{{%menu}}".
@@ -120,7 +121,11 @@ class Menu extends BaseModel
 
     /**
      * Готовим дерево меню для сайта
-     *
+     * @param $session
+     * @param $lang
+     * @param array $filter
+     * @return mixed
+     * @throws \ErrorException
      */
     public static function getFilteredTree(&$session, &$lang, $filter = [])
     {
@@ -144,7 +149,7 @@ class Menu extends BaseModel
             $filter['site_id'] = $site['id'];
 
             $query = self::find()
-                ->select('id, path, parent_id, name, menu_name, is_all_section, is_current_section, section_id, menu_id, content_keys_json')
+                ->select('id, path, url, parent_id, name, menu_name, is_all_section, is_current_section, section_id, menu_id, content_keys_json')
                 ->from(static::tablename())
                 ->where($filter);
 
@@ -177,9 +182,88 @@ class Menu extends BaseModel
         return $menu;
     }
 
+    public static function get500BySection(&$session, &$lang, $section, $e, $tags=[])
+    {
+        $message = $e->getMessage();
+        if (YII_ENV_DEV) {
+            $message .= "\n" . $e->getFile() . ' (' . $e->getLine() . ")\n" . $e->getTraceAsString();
+        }
+        $template_key = 'Error500,Error';
+        $ctype = 'error';
+        $ccontent = ['Oops fatal error: ' . nl2br(Html::encode($message))];
+
+        return static::getErrorPageBySection($session, $lang, $section, '500', $template_key, $ctype, $ccontent, $tags);
+    }
+
+    public static function get404BySection(&$session, &$lang, $section, $tags=[])
+    {
+        $template_key = 'Error404,Error';
+        $ctype = 'error';
+        $ccontent = ['Not founded.', 'Not founded. (Content for default 404 not founded.)'];
+
+        return static::getErrorPageBySection($session, $lang, $section, '404', $template_key, $ctype, $ccontent, $tags);
+    }
+
+    public static function getErrorPageBySection(&$session, &$lang, $section, $code, $template_key, $ctype, $ccontent, $tags=[])
+    {
+        try {
+            $page = static::getItemBySectionPage($session, $section, $code, $tags);
+        } catch (\Throwable $e) { // For PHP 7
+            $page = false;
+        } catch (\Exception $e) { // For PHP 5
+            $page = false;
+        }
+
+        if (!$page) { // этой страницы может не быть в БД, а можеть быть для каждого раздела своя кастомизированная
+            $page = [];
+
+            // todo fill seo by default for default 404 page
+            $page['seo'] = [
+
+            ];
+            $page['section'] = $section;
+            $page['lang'] = $lang;
+            $page['content'] = [
+                [
+                    'id' => '-' . $code,
+                    'content' => $ccontent[0],
+                    'template_key' => $template_key,
+                    'type' => $ctype,
+                    //'content_keys' => $_item['content_keys'], // с исходного элемента!
+                ]
+            ];
+        } else {
+            $parts = [];
+            $get = null;
+            $post = null;
+            try {
+                $content = Content::getContentForPage($session, $lang, $section, $page, $parts, $get, $post);
+            } catch (\Exception $e) {
+                // здесь мы не должны возвращать 404! но в dev режиме (! to do?) мы можем выдать и 500
+                $content = [
+                    [
+                        'id' => '-' . $code,
+                        'content' => sizeof($ccontent) > 1 ? $ccontent[0] : $ccontent[1],
+                        'template_key' => $template_key,
+                        'type' => $ctype,
+                    ]
+                ];
+            }
+            $page['content'] = $content;
+        }
+
+        return $page;
+    }
+
     /**
      * Делаем поиск страницы с по урлу с учетом раздела
      *
+     * @param $session
+     * @param $section
+     * @param $page_path
+     * @param array $tags
+     * @return mixed
+     * @throws \ErrorException
      */
     public static function getItemBySectionPage(&$session, $section, $page_path, $tags=[])
     {
@@ -224,21 +308,45 @@ class Menu extends BaseModel
         return static::getItemByField($session, $where, $whereParams, $key, $tags);
     }
 
+    /**
+     * заполняем $session['site']['menus']
+     * также дополняем $content контентом для формирования менюшек
+     *
+     * @param $session
+     * @param $lang
+     * @param $content
+     * @throws \ErrorException
+     */
+    public static function fillContentFromMenu(&$session, &$lang, &$content)
+    {
+        // заполняем после парса урла (нам нужен lang для перевода менюшек)
+        $session['site']['menus'] = static::getFilteredTree($session, $lang, ['is_blocked' => 0]);
+
+        $menusContent = static::getContentFromMenu($session, $lang,$session['site']['menus']);
+        // заменить на https://www.php.net/manual/ru/function.array-merge.php
+        foreach ($menusContent as $c) {
+            $content[] = $c;
+        }
+    }
 
     /**
-     * Формируем единицы контента из меню
+     * Формируем единицы контента из меню. рекурсия!
      * @param $session
+     * @param $lang
+     * @param $menu
+     * @return array
      */
-    public static function getContentFromMenu(&$session, &$menu)
+    private static function getContentFromMenu(&$session, &$lang, &$menu)
     {
         $content = [];
         foreach ($menu as $_item) {
-            $item = ($_item['menu_id']) ? Menu::getItemById($session, $_item['menu_id']) : $_item;
-            $content[] = [
+            $item = ($_item['menu_id']) ? static::getItemById($session, $_item['menu_id']) : $_item;
+
+            $ii = [
                 'id' => $_item['id'],  // с исходного элемента!
                 'content' => '',
                 'type' => 'link',
-                'content_keys' => $_item['content_keys'], // с исходного элемента!
+                //'content_keys' => $_item['content_keys'], // с исходного элемента!
                 'settings' => [
                     'menu_name' => $_item['menu_name'], // название в ссылке возьмем с иходного элемента
                     // может быть что то еще взять с исходного элемента ? надо подумать
@@ -250,8 +358,15 @@ class Menu extends BaseModel
                     'url' => $_item['url'], // внешний урл. с исходного элемента! так как это первое проверяем и если оно не пусто то сразу лепим внешний линк
 
                 ],
-                'childs' => $item['childs'] ? static::getContentFromMenu($session, $item['childs']) : [],
+                //'childs' => $item['childs'] ? static::getContentFromMenu($session, $lang, $item['childs']) : [],
             ];
+            if (isset($_item['content_keys'])) {
+                $ii['content_keys'] = $_item['content_keys'];
+            }
+            if (isset($item['childs'])) {
+                $ii['childs'] = static::getContentFromMenu($session, $lang, $item['childs']);
+            }
+            $content[] = $ii;
         }
         return $content;
     }

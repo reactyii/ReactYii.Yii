@@ -37,6 +37,11 @@ class ReactController extends Controller
      * }/*
      */
 
+    public function actionError()
+    {
+
+    }/**/
+
     /**
      * Displays homepage.
      *
@@ -53,7 +58,7 @@ class ReactController extends Controller
             return; // ответ уже выслан или ничего не надо посылать
         }
 
-        Yii::info('continue afterCORS', __METHOD__);
+        //Yii::info('continue afterCORS', __METHOD__);
 
         $host = null;
         $session = Site::getSite($host); // по сути тут инициализируем сессию вернется сессия с найденным сайтом
@@ -62,57 +67,61 @@ class ReactController extends Controller
         $post = $request->isPost ? $request->post() : null;
 
         if ($request->isAjax) {
-            $_get = $request->get();
-            $get = [];
-            foreach ($_get as $k => $v) {
-                if ($k === 'url') continue; // вот нахрена $request->get() сует url в гет параметры? ппц!!!
-                if (strpos($k, '__') === 0) continue; // скипаем наши системные параметры типа "__siteLM"
-                $get[$k] = $v;
-            }
-            //$get = null; // для тестирования условия
-
-            list ($lang, $section, $page, $content) = $this->parsePath($session, $path, $get, $post);
-
-            $session['site']['menus'] = Menu::getFilteredTree($session, $lang, ['is_blocked' => 0]);
-
-            $menusContent = Menu::getContentFromMenu($session, $session['site']['menus']);
-            // заменить на https://www.php.net/manual/ru/function.array-merge.php
-            foreach($menusContent as $c) {
-                $content[] = $c;
-            }
-
-            // sleep(3); // отладка
-            //Yii::info('prepare json data for page', __METHOD__);
-            if ($path == '404.html') {
-                throw new \yii\web\NotFoundHttpException();
-                // return false;
-            }
-
+            list ($lang, $section, $page, $content) = [null, null, null, null];
             $response = Yii::$app->response;
             $response->format = \yii\web\Response::FORMAT_JSON;
-            $seo = [
-                'title' => 'hello world for /' . $path,
-                'desc' => 'descr'
-            ];
-            $page['seo'] = $seo;
-            // $page['requestedpath'] = '/' . $path; // это не нужно. на фронте запрашиваемый путь передается в колбэке запроса (через замыкание)
-            $_session = [];
-            $siteLM = $request->get('__siteLM');
-            //Yii::info('__siteLM=[' . $siteLM . '] site[lastModified]=' . $session['site']['lastModified'], __METHOD__);
-            // todo надо учесть время изменения юзера также как и сайта!!!
-            if (!$siteLM || $siteLM < $session['site']['lastModified']) {
-                //$_session['site'] = $session['site'];
-                $_session = $session;
-                // Yii::info('send session', __METHOD__);
+            try {
+                $_get = $request->get();
+                $get = [];
+                foreach ($_get as $k => $v) {
+                    if ($k === 'url') continue; // вот нахрена $request->get() сует url в гет параметры? ппц!!!
+                    if (strpos($k, '__') === 0) continue; // скипаем наши системные параметры типа "__siteLM"
+                    $get[$k] = $v;
+                }
+                //$get = null; // для тестирования условия
+
+                list ($lang, $section, $page, $content, $seo) = $this->parsePath($session, $path, $get, $post);
+
+                // после $this->parsePath (нам нужен lang для перевода менюшек)
+                Menu::fillContentFromMenu($session, $lang, $content);
+
+                // sleep(3); // отладка
+                //Yii::info('prepare json data for page', __METHOD__);
+
+                // $page['requestedpath'] = '/' . $path; // это не нужно. на фронте запрашиваемый путь передается в колбэке запроса (через замыкание)
+
+                // заполним $page['session'] если нужно
+                $_session = [];
+                $siteLM = $request->get('__siteLM');
+                //Yii::info('__siteLM=[' . $siteLM . '] site[lastModified]=' . $session['site']['lastModified'], __METHOD__);
+                // todo надо учесть время изменения юзера также как и сайта!!!
+                if (!$siteLM || $siteLM < $session['site']['lastModified']) {
+                    //$_session['site'] = $session['site'];
+                    $_session = $session;
+                    // Yii::info('send session', __METHOD__);
+                }
+                if ($_session)
+                    $page['session'] = $_session;
+
+                $response->data = $page;
+            } catch (\yii\web\NotFoundHttpException $e) { // 404 в аякс режиме - нужно вернуть вместо контента спец сформированный блок
+                // при возниконовении этой ошибки у нас не отресолвлен только $content и (или) $page, но в любом случае мы делаем поиск 404 страницы в БД
+
+                // $section (!) также может быть не отресолвлен, НО мы уже можем быть в ветке где нет такого раздела! и мы пытались отресолвить страницу с этим именем
+                // /ru/section_bad/page1.html у нас нет раздела section_bad и parsePath попробует найти страницу с этим именем и если не найдет, то выкинет исключение 404
+                // хотя и языка у нас тоже может не быть запрашиваемого
+                $page = Menu::get404BySection($session, $lang, $section);
+
+                $page['session'] = $session; // в 404 сделаем возврат и сессии также (подумать) в теории можно также как и для обычной страницы, но пока некада
+                $response->data = $page;
+            } catch (\Exception $e) {
+                Yii::error("=====> Exception: " . $e->getMessage(). "\n" . $e->getFile(). ' (' . $e->getLine() . ")\n" . $e->getTraceAsString(), __METHOD__);
+                // в проде тут может быть все плохо. самое херовое это когда и $session нема (БД ушла покурить)
+                // но мы должны попытаться вытащить все что можно (в надежде что БД тут и просто где то деление на ноль или ошибка в запросе)
+                $page = Menu::get500BySection($session, $lang, $section, $e);
+                $page['session'] = $session; // по аналогии с 404
+                $response->data = $page;
             }
-            if ($_session)
-                $page['session'] = $_session;
-
-            $page['section'] = $section;
-            $page['lang'] = $lang;
-            $page['content'] = $content;
-
-            $response->data = $page;
             return;
         }
 
@@ -126,8 +135,17 @@ class ReactController extends Controller
 
             // решение конечно не айс. так как мы дважды разбираем путь и делаем поиск контента, НО при включенном кешировании это допустимо
             // также в эту ветку мы зайдем если юзер в поиске нажмет "F5" для обновления страницы и такое должно происходить редко - ожидание
-            list ($lang, $section, $page, $content) = $this->parsePath($session, $path, $get, $post);
-            // если такой страницы на сайте нет то parsePath выкинет 404, а если мы прошли то значит вернем корректную страницу, но без SSR
+            try {
+                list ($lang, $section, $page, $content) = $this->parsePath($session, $path, $get, $post);
+                // если такой страницы на сайте нет то parsePath выкинет 404, а если мы прошли то значит вернем корректную страницу, но без SSR
+            }
+            catch(\yii\web\NotFoundHttpException $e) {
+                throw $e;
+            }
+            catch(Exception $e) {
+                Yii::error("=====> Exception: " . $e->getMessage(). "\n" . $e->getFile(). ' (' . $e->getLine() . ")\n" . $e->getTraceAsString(), __METHOD__);
+                throw $e;
+            }
 
             $data = $this->getDefaultSSRContent($session, $path);
         }
@@ -179,7 +197,7 @@ class ReactController extends Controller
         // РЕШЕНИЕ! выносим эту проверку до входа в SSR и если в урле есть "=" то будем парсить урл
         //if (strpos($path, '=')) return $result;
 
-        //return $result; // на локале в режиме разработки иногда нужно вызвать страницу без ssr
+        return $result; // на локале в режиме разработки иногда нужно вызвать страницу без ssr
 
         // check cache!
 
@@ -376,12 +394,22 @@ class ReactController extends Controller
 
         // дополним контент менюшками! снаружи! так как данная фнукция используется и для парсинга поисковых форм
 
+        $seo = [
+            'title' => 'hello world for /' . $path,
+            'desc' => 'descr'
+        ];
+
+        $page['seo'] = $seo;
+        $page['section'] = $section;
+        $page['lang'] = $lang;
+        $page['content'] = $content;
 
         return [
             $lang,
             $section,
             $page,
-            $content
+            $content,
+            $seo
         ];
     }
 }
