@@ -39,7 +39,20 @@ class ReactController extends Controller
 
     public function actionError()
     {
+        $_data = $this->getDefaultSSRContent($session, $path);
+        Yii::$app->getResponse()->setStatusCode(404);
+        return $this->render('index', $_data);
 
+        /*$exception = $this->findException();
+        Yii::error("actionError: ----------------\n\n\n" . var_export($exception, true));
+
+        if (404) {
+            $_data = $this->setSSR($session, '404.html');
+            if ($_data['status'] === 200) // найдена отрендеренная 404
+            {
+                return $this->render('index', $_data);
+            }
+        }/**/
     }/**/
 
     /**
@@ -147,7 +160,7 @@ class ReactController extends Controller
                 throw $e;
             }
 
-            $data = $this->getDefaultSSRContent($session, $path);
+            $data = $this->getDefaultSSRContent($session);
         }
         else {
             // SSR
@@ -156,7 +169,25 @@ class ReactController extends Controller
 
         switch ($data['status']) {
             case 404:
-                throw new \yii\web\NotFoundHttpException();
+                Yii::$app->getResponse()->setStatusCode(404);
+                // попробуем найти заранее сгенеренную
+                $_data = $this->setSSR($session, '404.html');
+                if ($_data['status'] === 200) // найдена отрендеренная 404
+                {
+                    // вот тут надо вставить костылик!
+                    // так как сгенеренная 404 содержит "pageWraper":{"key":"\u002F404.html" а у нас урл $path отличается от 404.html
+                    // и реакт делает повторную загрузку этой страницы
+                    // пока вот так по тупому - не надежно может отвалится при изменении структуры данных
+                    $_data['content'] = str_replace(
+                        '"pageWraper":{"key":"\u002F404.html"',
+                        '"pageWraper":{"key":"' . str_replace(['/', '"', "\n"], ['\\u002F', '', ''], '/' . $path) . '"',
+                        $_data['content']
+                    );
+                    return $this->render('index', $_data);
+                }
+
+                $_data = $this->getDefaultSSRContent($session);
+                return $this->render('index', $_data);
             case 301:
             case 302:
                 // редирект (пока кинем ошибку - не реализовано)
@@ -164,6 +195,10 @@ class ReactController extends Controller
                 // $this->redirect('http://example.com/new', 301);
                 break;
             case 200:
+                if ($path === '404.html') // спец страница, чтоб поисковики туда не шарились, ssr ее находит и корректно возвращает 200 (так и должнор быть)
+                {
+                    Yii::$app->getResponse()->setStatusCode(404);
+                }
                 return $this->render('index', $data);
             default:
                 // https://www.yiiframework.com/doc/guide/2.0/ru/runtime-responses
@@ -171,7 +206,7 @@ class ReactController extends Controller
         }
     }
 
-    private function getDefaultSSRContent(&$session, $path) {
+    private function getDefaultSSRContent(&$session) {
         return [
             'status' => 200,
             'content' => '<noscript>You need to enable JavaScript to run this app.</noscript><div id="root"></div>',
@@ -187,7 +222,15 @@ class ReactController extends Controller
     private function setSSR(&$session, $path)
     {
         $site = BaseModel::getSiteFromSession($session);
-        $result = $this->getDefaultSSRContent($session, $path);
+        $result = $this->getDefaultSSRContent($session);
+
+        // чисто для оптимизации, чтоб не делать поиск заведомо не существующей страницы
+        // вот так по любому не надо и мы должны найти сгенерированную страницу
+        /*if ($path === '404.html')
+        {
+            $result['status'] = 404;
+            return $result;
+        }/**/
 
         // если юзер авторизован, то сразу выходим и возвращаем код 200
         if ($session['user'] !== null) return $result;
@@ -197,7 +240,7 @@ class ReactController extends Controller
         // РЕШЕНИЕ! выносим эту проверку до входа в SSR и если в урле есть "=" то будем парсить урл
         //if (strpos($path, '=')) return $result;
 
-        return $result; // на локале в режиме разработки иногда нужно вызвать страницу без ssr
+        //return $result; // на локале в режиме разработки иногда нужно вызвать страницу без ssr
 
         // check cache!
 
