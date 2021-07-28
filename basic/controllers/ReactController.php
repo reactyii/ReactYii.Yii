@@ -15,6 +15,7 @@ use app\models\Section;
 use app\models\Site;
 use app\models\Content;
 use yii\caching\TagDependency;
+use yii\base\ErrorException;
 
 class ReactController extends Controller
 {
@@ -39,21 +40,31 @@ class ReactController extends Controller
 
     public function actionError()
     {
-        $_data = $this->getDefaultSSRContent($session, $path);
-        Yii::$app->getResponse()->setStatusCode(404);
-        return $this->render('index', $_data);
+        // перенаправление ошибок работает тока в проде в разработке мы попадаем в перехватчик ошибок модуля debug
+        // сюда мы завалимся тока при 500 ошибке
+        //$e = Yii::$app->errorHandler->exception;
+        //Yii::error("\n\n\n\n------>>>> actionError: " . $e->getMessage(). "\n" . $e->getFile(). ' (' . $e->getLine() . ")\n" . $e->getTraceAsString(), __METHOD__);
+        //Yii::error("actionError: ----------------\n\n\n" . var_export($exception, true));
 
-        /*$exception = $this->findException();
-        Yii::error("actionError: ----------------\n\n\n" . var_export($exception, true));
+        $_data = $this->loadSSR('500.html');
+        if ($_data['status'] === 200) // найдена отрендеренная 404
+        {
+            $request = Yii::$app->request;
+            $path = $request->pathInfo;
+            //Yii::error("actionError: ----------------\n\n\n" . $path);
+            /*$_data['content'] = str_replace(
+                '"pageWraper":{"key":"\u002F500.html"',
+                '"pageWraper":{"key":"' . str_replace(['/', '"', "\n"], ['\\u002F', '', ''], '/' . $path) . '"',
+                $_data['content']
+            );/**/
+            $_data['content'] = $this->replaceWrapperKey('500.html', $path, $_data['content']);
+            Yii::error("content=" . $_data['content']);
+            return $this->render('index', $_data);
+        }
 
-        if (404) {
-            $_data = $this->setSSR($session, '404.html');
-            if ($_data['status'] === 200) // найдена отрендеренная 404
-            {
-                return $this->render('index', $_data);
-            }
-        }/**/
-    }/**/
+        // не понятная ошибка
+
+    }
 
     /**
      * Displays homepage.
@@ -84,6 +95,9 @@ class ReactController extends Controller
             $response = Yii::$app->response;
             $response->format = \yii\web\Response::FORMAT_JSON;
             try {
+
+                //throw new ErrorException("Test 500 error");
+
                 $_get = $request->get();
                 $get = [];
                 foreach ($_get as $k => $v) {
@@ -171,18 +185,19 @@ class ReactController extends Controller
             case 404:
                 Yii::$app->getResponse()->setStatusCode(404);
                 // попробуем найти заранее сгенеренную
-                $_data = $this->setSSR($session, '404.html');
+                $_data = $this->loadSSR('404.html');
                 if ($_data['status'] === 200) // найдена отрендеренная 404
                 {
                     // вот тут надо вставить костылик!
                     // так как сгенеренная 404 содержит "pageWraper":{"key":"\u002F404.html" а у нас урл $path отличается от 404.html
                     // и реакт делает повторную загрузку этой страницы
                     // пока вот так по тупому - не надежно может отвалится при изменении структуры данных
-                    $_data['content'] = str_replace(
+                    /*$_data['content'] = str_replace(
                         '"pageWraper":{"key":"\u002F404.html"',
                         '"pageWraper":{"key":"' . str_replace(['/', '"', "\n"], ['\\u002F', '', ''], '/' . $path) . '"',
                         $_data['content']
-                    );
+                    );/**/
+                    $_data['content'] = $this->replaceWrapperKey('404.html', $path, $_data['content']);
                     return $this->render('index', $_data);
                 }
 
@@ -198,6 +213,9 @@ class ReactController extends Controller
                 if ($path === '404.html') // спец страница, чтоб поисковики туда не шарились, ssr ее находит и корректно возвращает 200 (так и должнор быть)
                 {
                     Yii::$app->getResponse()->setStatusCode(404);
+                } else if ($path === '500.html') // спец страница, чтоб поисковики туда не шарились, ssr ее находит и корректно возвращает 200 (так и должнор быть)
+                {
+                    Yii::$app->getResponse()->setStatusCode(500);
                 }
                 return $this->render('index', $data);
             default:
@@ -206,7 +224,7 @@ class ReactController extends Controller
         }
     }
 
-    private function getDefaultSSRContent(&$session) {
+    private function getDefaultSSRContent() {
         return [
             'status' => 200,
             'content' => '<noscript>You need to enable JavaScript to run this app.</noscript><div id="root"></div>',
@@ -222,7 +240,7 @@ class ReactController extends Controller
     private function setSSR(&$session, $path)
     {
         $site = BaseModel::getSiteFromSession($session);
-        $result = $this->getDefaultSSRContent($session);
+        $result = $this->getDefaultSSRContent();
 
         // чисто для оптимизации, чтоб не делать поиск заведомо не существующей страницы
         // вот так по любому не надо и мы должны найти сгенерированную страницу
@@ -254,54 +272,7 @@ class ReactController extends Controller
         return Yii::$app->cache->getOrSet($key, function () use ($key, $site, $session, $path, $result) {
             Yii::info("eval setSSR for cachekey=" . $key, __METHOD__);
 
-            $ssr_path = rtrim(Yii::getAlias('@reactSSR'), '/\\');
-
-            $filename = $path;
-            switch ($path) {
-                case '':
-                case 'index.html':
-                    $filename = 'index.html';
-                    break;
-            }
-
-            $page = @implode('', @file($ssr_path . '/' . $filename));
-            if (! $page) // нет страницы вернем 404
-            {
-                $result['status'] = 404;
-                return $result;
-            }
-            list ($header, $body) = explode('</head><body>', $page, 2);
-            list ($tmp, $header) = explode('<head>', $header);
-            list ($body, $tmp) = explode('</body>', $body);
-
-            // уберем из хеадера линки на стили
-            $header = preg_replace([
-                '/<link [^>]* rel="stylesheet">/'
-            ], [
-                ''
-            ], $header);
-            $header = str_replace([
-                '<link href="/manifest.json" rel="manifest">',
-                '<meta charset="utf-8">'
-            ], [
-                '',
-                ''
-            ], $header);
-
-            // из боди линки на скрипты
-            $body = preg_replace([
-                '/<script>.*?<\\/script>/',
-                '/<script src=.*?<\\/script>/'
-            ], [
-                '',
-                ''
-            ], $body);
-
-            // Yii::info('SSR [' . $ssr_path . '/' . $path . '] page= ' . var_export($page, true), __METHOD__); // http://localhost:3000
-            $result['content'] = $body;
-            $result['header'] = $header;
-
-            return $result;
+            return static::loadSSR($path);
         }, null, new TagDependency([
             'tags' => [
                 'site-' . $site['id'], // чтоб скинуть кеши всего сайта
@@ -309,6 +280,68 @@ class ReactController extends Controller
                                        // 'page-' . $path // чтоб обновить конкретную страницу (скорее всего это использовать не будем!)
             ]
         ]));
+    }
+
+    private function replaceWrapperKey($key, $path, $content)
+    {
+        return str_replace(
+            '"pageWraper":{"key":"\u002F' . $key . '"',
+            '"pageWraper":{"key":"' . str_replace(['/', '"', "\n"], ['\\u002F', '', ''], '/' . $path) . '"',
+            $content
+        );
+    }
+
+    private function loadSSR($path)
+    {
+        $result = $this->getDefaultSSRContent();
+        $ssr_path = rtrim(Yii::getAlias('@reactSSR'), '/\\');
+
+        $filename = $path;
+        switch ($path) {
+            case '':
+            case 'index.html':
+                $filename = 'index.html';
+                break;
+        }
+
+        $page = @implode('', @file($ssr_path . '/' . $filename));
+        if (!$page) // нет страницы вернем 404
+        {
+            $result['status'] = 404;
+            return $result;
+        }
+        list ($header, $body) = explode('</head><body>', $page, 2);
+        list ($tmp, $header) = explode('<head>', $header);
+        list ($body, $tmp) = explode('</body>', $body);
+
+        // уберем из хеадера линки на стили
+        $header = preg_replace([
+            '/<link [^>]* rel="stylesheet">/'
+        ], [
+            ''
+        ], $header);
+        $header = str_replace([
+            '<link href="/manifest.json" rel="manifest">',
+            '<meta charset="utf-8">'
+        ], [
+            '',
+            ''
+        ], $header);
+
+        // из боди линки на скрипты
+        $body = preg_replace([
+            '/<script>.*?<\\/script>/',
+            '/<script src=.*?<\\/script>/'
+        ], [
+            '',
+            ''
+        ], $body);
+
+        // Yii::info('SSR [' . $ssr_path . '/' . $path . '] page= ' . var_export($page, true), __METHOD__); // http://localhost:3000
+        $result['content'] = $body;
+        $result['header'] = $header;
+
+        return $result;
     }
 
     /**
@@ -422,6 +455,12 @@ class ReactController extends Controller
             array_shift($parts);
         }
         if ($page_path === '') $page_path = 'index';
+
+        // если имя страницы 404 то сразу кинем исключение. оно будет перехвачено сверху и будет сгенерен контент для 404 страницы
+        if ($page_path === '404') throw new \yii\web\NotFoundHttpException();
+
+        // тоже самое и для 500 страницы
+        if ($page_path === '500') throw new \Exception();
 
         //Yii::info('=====> $page_path=' . $page_path, __METHOD__);
         $page = Menu::getItemBySectionPage($session, $section, $page_path);

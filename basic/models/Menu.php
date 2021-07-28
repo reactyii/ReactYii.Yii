@@ -190,7 +190,7 @@ class Menu extends BaseModel
         }
         $template_key = 'Error500,Error';
         $ctype = 'error';
-        $ccontent = ['Oops fatal error: ' . nl2br(Html::encode($message))];
+        $ccontent = ['Oops fatal error' . ($message ? ': ' . nl2br(Html::encode($message)) : '!')];
 
         return static::getErrorPageBySection($session, $lang, $section, '500', $template_key, $ctype, $ccontent, $tags);
     }
