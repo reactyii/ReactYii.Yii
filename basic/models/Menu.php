@@ -325,6 +325,7 @@ class Menu extends BaseModel
         $menusContent = static::getContentFromMenu($session, $lang,$session['site']['menus']);
         // заменить на https://www.php.net/manual/ru/function.array-merge.php
         foreach ($menusContent as $c) {
+            Yii::info('fillContentFromMenu:' . var_export($c, true), __METHOD__);
             $content[] = $c;
         }
     }
