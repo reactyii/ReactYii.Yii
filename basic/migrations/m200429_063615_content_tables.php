@@ -26,11 +26,11 @@ class m200429_063615_content_tables extends Migration
         if (!is_array($columns)) $columns = [$columns];
 
         $this->addForeignKey('fk-' . $table . '-' . implode('-', $columns),
-        $_table,
-        $columns,
-        $_refTable,
-        $refColumns,
-        $delete, $update);
+            $_table,
+            $columns,
+            $_refTable,
+            $refColumns,
+            $delete, $update);
     }
 
     /**
@@ -77,7 +77,7 @@ class m200429_063615_content_tables extends Migration
         $this->_createIndex($_tn, ['is_blocked']);
 
         // db->createCommand() можно и не использовать, но нам понадобится LastInsertID и хз на каких БД это может работать по другому (иногда нужен единый контекст вызова)
-        $this/*->db->createCommand()*/->insert($tn, [
+        $this/*->db->createCommand()*/ ->insert($tn, [
             'name' => 'Site',
             'created_at' => date('Y-m-d H:i:s'),
             'main_host' => $host,
@@ -119,13 +119,12 @@ class m200429_063615_content_tables extends Migration
 
         $this->_addForeignKey($_tn, 'site_id', 'site', 'id');  // при удалении сайта языки будут удалены!
 
-        if ($needTestData)
-        {
-            $this/*->db->createCommand()*/->insert($tn, [
+        if ($needTestData) {
+            $this/*->db->createCommand()*/ ->insert($tn, [
                 'site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
                 'priority' => 10, 'name' => 'Русский', 'path' => 'ru', 'is_default' => 1,
             ]);
-            $this/*->db->createCommand()*/->insert($tn, [
+            $this/*->db->createCommand()*/ ->insert($tn, [
                 'site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
                 'priority' => 20, 'name' => 'English', 'path' => 'en', 'is_default' => 0,
             ]);
@@ -145,7 +144,7 @@ class m200429_063615_content_tables extends Migration
             'is_blocked' => $this->tinyInteger()->notNull()->defaultValue(0)->comment('Для временного скрытия'),
 
             // defaultValue(-1) - так как NULL выпадает из индекса
-            'parent_id' => $this->bigInteger()/*->notNull()->defaultValue(-1)*/->comment('Cразу для реализации дерева разделов. Иногда тут могут быть регионы и города.'),
+            'parent_id' => $this->bigInteger()/*->notNull()->defaultValue(-1)*/ ->comment('Cразу для реализации дерева разделов. Иногда тут могут быть регионы и города.'),
 
             'name' => $this->string(1024)->notNull(), // это значение исключительно для админа, так как h1 будем всегда брать со страницы
             // всегда со страницы
@@ -178,14 +177,13 @@ class m200429_063615_content_tables extends Migration
         ]);
         $admin_sect_id = $this->db->getLastInsertID();
 
-        if ($needTestData)
-        {
-            $this/*->db->createCommand()*/->insert($tn, [
+        if ($needTestData) {
+            $this/*->db->createCommand()*/ ->insert($tn, [
                 'site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
                 'priority' => 20, 'name' => 'Раздел в поддомене', 'host' => 'subdomain.' . $host
             ]);
             $sect1_id = $this->db->getLastInsertID();
-            $this/*->db->createCommand()*/->insert($tn, [
+            $this/*->db->createCommand()*/ ->insert($tn, [
                 'site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
                 'priority' => 30, 'name' => 'Раздел в пути', 'path' => 'part-of-path'
             ]);
@@ -196,8 +194,7 @@ class m200429_063615_content_tables extends Migration
         $_tn = 'menu';
         $tn = '{{%' . $_tn . '}}';
         $_tableOptions = $tableOptions;
-        if ($this->db->driverName === 'mysql')
-        {
+        if ($this->db->driverName === 'mysql') {
             $_tableOptions .= " COMMENT='Дерево страниц сайта.<br/><br/>";
             $_tableOptions .= "Разделы.<br/>";
             $_tableOptions .= '1. Раздел по умолчанию "section_id" = NULL есть всегда. В нем расположена, как минимум, одна страница - главная сайта.<br/>';
@@ -226,8 +223,8 @@ class m200429_063615_content_tables extends Migration
             'layout' => $this->string(255)->defaultValue(null)->comment('Шаблон страницы. Если null, то Layout.'),
 
             'path' => $this->string()->comment('Путь для кодирования в урл. Если не NULL, то в меню отображается именно эта страница'), // тут может быть нул!
-            'menu_id'  => $this->bigInteger()->comment('Линк на внутренню страницу. Если path is NULL, то в меню вставляем линк на внутренню страницу'),
-            'url'  => $this->string(1024)->comment('Внешний URL. Если path is NULL and page_id is NULL, то в меню вставляем внешний линк и target="_blank"'),
+            'menu_id' => $this->bigInteger()->comment('Линк на внутренню страницу. Если path is NULL, то в меню вставляем линк на внутренню страницу'),
+            'url' => $this->string(1024)->comment('Внешний URL. Если path is NULL and page_id is NULL, то в меню вставляем внешний линк и target="_blank"'),
 
             'search_words' => $this->text()->comment('Слова для поиска. При сохранении страницы здесь формируем список слов для поиска.'),
 
@@ -254,62 +251,74 @@ class m200429_063615_content_tables extends Migration
         $this->_addForeignKey($_tn, 'parent_id', $_tn, 'id', 'SET NULL'); // при удалении родителя все его страницы будут премещены на верхний уровень
 
         $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
-            'priority' => 100500, 'section_id'=> $admin_sect_id, 'menu_name' => 'Личный кабинет', 'path' => 'index'
+            'priority' => 100500, 'section_id' => $admin_sect_id, 'menu_name' => 'Личный кабинет', 'path' => 'index',
+            'content_keys_json' => json_encode(['MENU_PRIVATE'], JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK),
         ]);
         $menu_admin_index_id = $this->db->getLastInsertID();
 
         $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
-            'priority' => 100600, 'section_id'=> $admin_sect_id, 'menu_name' => 'Список страниц', 'path' => 'pages'
+            'priority' => 100600, 'section_id' => $admin_sect_id, 'menu_name' => 'Список страниц', 'path' => 'pages',
+            'parent_id' => $menu_admin_index_id,
+            'content_keys_json' => json_encode(['MENU_SIDE'], JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK),
         ]);
         $menu_admin_pages_id = $this->db->getLastInsertID();
 
         $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
-            'priority' => 100700, 'section_id'=> $admin_sect_id, 'menu_name' => 'Список контента', 'path' => 'contents'
+            'priority' => 100700, 'section_id' => $admin_sect_id, 'menu_name' => 'Список контента', 'path' => 'contents',
+            'parent_id' => $menu_admin_index_id,
+            'content_keys_json' => json_encode(['MENU_SIDE'], JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK),
         ]);
         $menu_admin_contents_id = $this->db->getLastInsertID();
 
-        if ($needTestData)
-        {
+        if ($needTestData) {
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
-                'priority' => 10, 'menu_name' => 'Главная', 'path' => 'index'
+                'priority' => 10, 'menu_name' => 'Главная', 'path' => 'index',
+                'content_keys_json' => json_encode(['MENU_TOP'], JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK),
             ]);
             $menu_index_id = $this->db->getLastInsertID();
             //Yii::info('------> $menu_index_id=' . $menu_index_id);
 
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
-                'priority' => 20, 'name' => 'О компании', 'menu_name' => 'О компании', 'path' => 'about'
+                'priority' => 20, 'name' => 'О компании', 'menu_name' => 'О компании', 'path' => 'about',
+                'content_keys_json' => json_encode(['MENU_SIDE'], JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK),
             ]);
             $menu_about_id = $this->db->getLastInsertID();
 
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
-                'priority' => 30, 'name' => 'Контакты', 'menu_name' => 'Контакты', 'path' => 'contacts'
+                'priority' => 30, 'name' => 'Контакты', 'menu_name' => 'Контакты', 'path' => 'contacts',
+                'content_keys_json' => json_encode(['MENU_SIDE'], JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK),
             ]);
             $menu_contacts_id = $this->db->getLastInsertID();
 
             // все разделы
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
-                'priority' => 20, 'is_all_section' => 1, 'name' => 'Новости', 'menu_name' => 'Новости', 'path' => 'news'
+                'priority' => 20, 'is_all_section' => 1, 'name' => 'Новости', 'menu_name' => 'Новости', 'path' => 'news',
+                'content_keys_json' => json_encode(['MENU_SIDE'], JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK),
             ]);
             $menu_news_id = $this->db->getLastInsertID();
 
             // разделы
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
-                'priority' => 1000, 'section_id'=> $sect1_id, 'menu_name' => 'Раздел в пути', 'path' => 'index'
+                'priority' => 1000, 'section_id' => $sect1_id, 'menu_name' => 'Раздел в пути', 'path' => 'index',
+                'content_keys_json' => json_encode(['MENU_TOP'], JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK),
             ]);
             $menu_s1_index_id = $this->db->getLastInsertID();
 
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
-                'priority' => 1010, 'section_id'=> $sect1_id, 'name' => 'Подробнее о разделе', 'menu_name' => 'О разделе', 'path' => 'about'
+                'priority' => 1010, 'section_id' => $sect1_id, 'name' => 'Подробнее о разделе', 'menu_name' => 'О разделе', 'path' => 'about',
+                'content_keys_json' => json_encode(['MENU_SIDE'], JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK),
             ]);
             $menu_s1_about_id = $this->db->getLastInsertID();
 
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
-                'priority' => 2000, 'section_id'=> $sect2_id, 'menu_name' => 'Раздел в домене', 'path' => 'index'
+                'priority' => 2000, 'section_id' => $sect2_id, 'menu_name' => 'Раздел в домене', 'path' => 'index',
+                'content_keys_json' => json_encode(['MENU_TOP'], JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK),
             ]);
             $menu_s2_index_id = $this->db->getLastInsertID();
 
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
-                'priority' => 2010, 'section_id'=> $sect2_id, 'menu_name' => 'Статьи', 'path' => 'articles'
+                'priority' => 2010, 'section_id' => $sect2_id, 'menu_name' => 'Статьи', 'path' => 'articles',
+                'content_keys_json' => json_encode(['MENU_SIDE'], JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK),
             ]);
             $menu_s2_articles_id = $this->db->getLastInsertID();
 
@@ -354,7 +363,7 @@ class m200429_063615_content_tables extends Migration
             'parent_id' => $this->bigInteger()->comment('Шаблон может быть составным. Здесь укажем ид родительского шаблона.'),
 
             'type' => $this->string(30)->defaultValue(null)//->notNull()->defaultValue('text')
-                ->comment('Для какого типа контента: page, layout, list, text, string, block, image ...'),
+            ->comment('Для какого типа контента: page, layout, list, text, string, block, image ...'),
 
             'key' => $this->string()->notNull()->comment('Ключ шаблона для ссылки на него из других таблиц.'),
             'name' => $this->string()->notNull()->comment('Название шаблона для людей'),
@@ -371,10 +380,9 @@ class m200429_063615_content_tables extends Migration
 
         $this->_addForeignKey($_tn, 'site_id', 'site', 'id');  // при удалении сайта шаблоны будут удалены!
 
-        if ($needTestData)
-        {
+        if ($needTestData) {
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
-                'priority' => 10, 'type' => Template::TYPE_LIST, 'key'=>'NewsList', 'name' => 'Новости (список)'
+                'priority' => 10, 'type' => Template::TYPE_LIST, 'key' => 'NewsList', 'name' => 'Новости (список)'
             ]);
             $templ_news_list_id = $this->db->getLastInsertID();
 
@@ -383,11 +391,11 @@ class m200429_063615_content_tables extends Migration
             ]);
             $templ_table_id = $this->db->getLastInsertID();
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
-                'priority' => 10, 'parent_id'=>$templ_table_id, 'key'=>'TestTableRow', 'name' => 'Шаблон строка таблицы', 'template'=>'<div class="row">{{COLS}}</div>'
+                'priority' => 10, 'parent_id' => $templ_table_id, 'key' => 'TestTableRow', 'name' => 'Шаблон строка таблицы', 'template' => '<div class="row">{{COLS}}</div>'
             ]);
             $templ_tablerow_id = $this->db->getLastInsertID();
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
-                'priority' => 10, 'parent_id'=>$templ_tablerow_id, 'key'=>'TestTableCol', 'name' => 'Шаблон ячейка таблицы', 'template'=>'<span class="col">{{CONTENT}}</span>'
+                'priority' => 10, 'parent_id' => $templ_tablerow_id, 'key' => 'TestTableCol', 'name' => 'Шаблон ячейка таблицы', 'template' => '<span class="col">{{CONTENT}}</span>'
             ]);
 
         }
@@ -411,7 +419,7 @@ class m200429_063615_content_tables extends Migration
             // даже для примитивов сделаем шаблоны, например в некоторых шаблонах текст надо вставлять в div, а число форматировать по разному.
             // тип нужен! так как есть шаблоны React и для них нет записи в талице шаблонов
             'type' => $this->string(30)->defaultValue(null)//->notNull()->defaultValue('text')
-                ->comment('Тип единицы контента: list, text, string, block, image... Тип единицы однозначно определяет шаблон, но могут быть примитивы, например текст или число'),
+            ->comment('Тип единицы контента: list, text, string, block, image... Тип единицы однозначно определяет шаблон, но могут быть примитивы, например текст или число'),
 
             // где показывать контент - много ко многим!
             'menu_id' => $this->bigInteger()->comment('Главная страница где размещен контент. Используется для оптимизации, чтобы сразу вытащить весь контент для страницы. Кроме списковых элементов (is_list_item=1).'),
@@ -464,63 +472,62 @@ class m200429_063615_content_tables extends Migration
         // --список контента
         $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
             'settings_json' => json_encode(['per_page' => '4'], JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK),
-            'model' => 'page', 'type'=>Template::TYPE_LIST,
+            'model' => 'page', 'type' => Template::TYPE_LIST,
             'path' => 'pageslist',
-            'priority' => 100600, 'template_key' => 'ListPages', 'menu_id'=>$menu_admin_pages_id, 'section_id' =>$admin_sect_id, 'name' => 'Страницы', 'content'=>''
+            'priority' => 100600, 'template_key' => 'ListPages', 'menu_id' => $menu_admin_pages_id, 'section_id' => $admin_sect_id, 'name' => 'Страницы', 'content' => ''
         ]);
 
         $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
             'settings_json' => json_encode(['per_page' => '4'], JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK),
-            'model' => 'content', 'type'=>Template::TYPE_LIST,
+            'model' => 'content', 'type' => Template::TYPE_LIST,
             'path' => 'contentslist',
-            'priority' => 100700, 'template_key' => 'ListContent', 'menu_id'=>$menu_admin_contents_id, 'section_id' =>$admin_sect_id, 'name' => 'Список контента', 'content'=>''
+            'priority' => 100700, 'template_key' => 'ListContent', 'menu_id' => $menu_admin_contents_id, 'section_id' => $admin_sect_id, 'name' => 'Список контента', 'content' => ''
         ]);
 
-        if ($needTestData)
-        {
+        if ($needTestData) {
             // контент для index
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
-                'priority' => 10, 'menu_id'=>$menu_index_id, 'section_id' =>null, 'name' => 'Главная текстовый блок контэйнер', 'content'=>''
+                'priority' => 10, 'menu_id' => $menu_index_id, 'section_id' => null, 'name' => 'Главная текстовый блок контэйнер', 'content' => ''
             ]);
             $index_cid = $this->db->getLastInsertID();
 
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
-                'priority' => 10, 'parent_id' => $index_cid, 'menu_id'=>$menu_index_id, 'section_id' =>null, 'name' => 'Главная текстовый блок № 1', 'content'=>'<p>1 Block Content for index <b>sample bold</b>.</p>'
+                'priority' => 10, 'parent_id' => $index_cid, 'menu_id' => $menu_index_id, 'section_id' => null, 'name' => 'Главная текстовый блок № 1', 'content' => '<p>1 Block Content for index <b>sample bold</b>.</p>'
             ]);
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
-                'priority' => 20, 'parent_id' => $index_cid, 'menu_id'=>$menu_index_id, 'section_id' =>null, 'name' => 'Главная текстовый блок № 2', 'content'=>'<p>2 Block Content for index <b>sample bold</b>.</p>'
+                'priority' => 20, 'parent_id' => $index_cid, 'menu_id' => $menu_index_id, 'section_id' => null, 'name' => 'Главная текстовый блок № 2', 'content' => '<p>2 Block Content for index <b>sample bold</b>.</p>'
             ]);
 
             // контент для about
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
                 'settings_json' => json_encode(['align' => 'center'], JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK),
-                'priority' => 10, 'template_key' => 'H1', 'menu_id'=>$menu_about_id, 'section_id' =>null, 'name' => 'About h1', 'content'=>'<u>О</u> компании'
+                'priority' => 10, 'template_key' => 'H1', 'menu_id' => $menu_about_id, 'section_id' => null, 'name' => 'About h1', 'content' => '<u>О</u> компании'
             ]);
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
-                'priority' => 20, 'menu_id'=>$menu_about_id, 'section_id' =>null, 'name' => 'About текстовый блок', 'content'=>'Content for about <b>sample bold</b>.'
+                'priority' => 20, 'menu_id' => $menu_about_id, 'section_id' => null, 'name' => 'About текстовый блок', 'content' => 'Content for about <b>sample bold</b>.'
             ]);
             // --таблица
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
-                'priority' => 10, 'menu_id'=>$menu_about_id, 'section_id' =>null, 'name' => 'About пример таблицы', 'template_key'=>'TestTable'
+                'priority' => 10, 'menu_id' => $menu_about_id, 'section_id' => null, 'name' => 'About пример таблицы', 'template_key' => 'TestTable'
             ]);
             $about_table_cid = $this->db->getLastInsertID();
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
                 'parent_id' => $about_table_cid,
                 'content_keys_json' => json_encode(['ROWS'], JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK),
-                'priority' => 10, 'menu_id'=>$menu_about_id, 'section_id' =>null, 'name' => 'About 1 строка таблицы', 'template_key'=>'TestTableRow'
+                'priority' => 10, 'menu_id' => $menu_about_id, 'section_id' => null, 'name' => 'About 1 строка таблицы', 'template_key' => 'TestTableRow'
             ]);
             $about_table_row1_cid = $this->db->getLastInsertID();
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
                 'parent_id' => $about_table_row1_cid,
                 'content_keys_json' => json_encode(['COLS'], JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK),
-                'priority' => 10, 'menu_id'=>$menu_about_id, 'section_id' =>null, 'name' => 'About 1 строка 1 ячейка таблицы', 'template_key'=>'TestTableCol', 'content'=>'col <b>11</b>'
+                'priority' => 10, 'menu_id' => $menu_about_id, 'section_id' => null, 'name' => 'About 1 строка 1 ячейка таблицы', 'template_key' => 'TestTableCol', 'content' => 'col <b>11</b>'
             ]);
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
                 'parent_id' => $about_table_row1_cid,
                 'content_keys_json' => json_encode(['COLS'], JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK),
                 // в шаблоны записанные в БД низя передать настройки %( кроме каких-то совсем общих параметров
                 //'settings_json' => json_encode(['align' => 'center']),
-                'priority' => 20, 'menu_id'=>$menu_about_id, 'section_id' =>null, 'name' => 'About 1 строка 2 ячейка таблицы', 'template_key'=>'TestTableCol', 'content'=>'col <b>12</b>'
+                'priority' => 20, 'menu_id' => $menu_about_id, 'section_id' => null, 'name' => 'About 1 строка 2 ячейка таблицы', 'template_key' => 'TestTableCol', 'content' => 'col <b>12</b>'
             ]);
             // --/конец таблицы
 
