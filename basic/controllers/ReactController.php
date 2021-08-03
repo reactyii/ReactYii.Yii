@@ -112,6 +112,10 @@ class ReactController extends Controller
                 // после $this->parsePath (нам нужен lang для перевода менюшек)
                 Menu::fillContentFromMenu($session, $lang, $content);
 
+                $page['content'] = $content;
+
+                //Yii::info('content after Menu::fillContentFromMenu:' . json_encode($content, JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK | JSON_PRETTY_PRINT), __METHOD__);
+
                 // sleep(3); // отладка
                 //Yii::info('prepare json data for page', __METHOD__);
 
@@ -464,7 +468,7 @@ class ReactController extends Controller
 
         //Yii::info('=====> $page_path=' . $page_path, __METHOD__);
         $page = Menu::getItemBySectionPage($session, $section, $page_path);
-        //Yii::info("=====> page=" . var_export($page, true), __METHOD__);
+        Yii::info("=====> page=" . var_export($page, true), __METHOD__);
         if (!$page)
         {
             throw new \yii\web\NotFoundHttpException();
@@ -484,7 +488,8 @@ class ReactController extends Controller
         $page['seo'] = $seo;
         $page['section'] = $section;
         $page['lang'] = $lang;
-        $page['content'] = $content;
+        // $content мы еще изменим (дополним) снаружи
+        //$page['content'] = $content;
 
         return [
             $lang,

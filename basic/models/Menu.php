@@ -274,7 +274,7 @@ class Menu extends BaseModel
         $whereParams = [':page' => $page_path];
         if ($site['sections']) // с учетом раздела делаем поиск тока если разделы на сайте определены
         {
-            if (!$section) // если раздел был в пути то берем его
+            if (!$section) // если раздел был в пути, то берем его
                            // а вот тут надо взять раздел по умолчанию (это раздел у которого path и host пустые или нул)
             {
                 foreach ($site['sections'] as $s)
@@ -325,7 +325,7 @@ class Menu extends BaseModel
         $menusContent = static::getContentFromMenu($session, $lang,$session['site']['menus']);
         // заменить на https://www.php.net/manual/ru/function.array-merge.php
         foreach ($menusContent as $c) {
-            Yii::info('fillContentFromMenu:' . var_export($c, true), __METHOD__);
+            //Yii::info('fillContentFromMenu:' . var_export($c, true), __METHOD__);
             $content[] = $c;
         }
     }
@@ -345,11 +345,12 @@ class Menu extends BaseModel
 
             $ii = [
                 'id' => $_item['id'],  // с исходного элемента!
-                'content' => '',
+                'content' => $_item['menu_name'],//'', // вот передать название ссылки через контент или через settings? еще подумаем
                 'type' => 'link',
+                'template_key' => 'A', // а надо ли еще какие шаблоны указать или шаблон сам решит как отобразить сей линк?
                 //'content_keys' => $_item['content_keys'], // с исходного элемента!
                 'settings' => [
-                    'menu_name' => $_item['menu_name'], // название в ссылке возьмем с иходного элемента
+                    //'menu_name' => $_item['menu_name'], // название в ссылке возьмем с иходного элемента
                     // может быть что то еще взять с исходного элемента ? надо подумать
                     'is_all_section' => $item['is_all_section'],
                     'is_current_section' => $item['is_current_section'],
