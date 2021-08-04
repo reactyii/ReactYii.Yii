@@ -187,7 +187,7 @@ class m200429_063615_content_tables extends Migration
                 'site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
                 'priority' => 30, 'name' => 'Раздел в пути', 'path' => 'part-of-path'
             ]);
-            $sect2_id = $this->db->getLastInsertID();
+            $sect_path_id = $this->db->getLastInsertID();
         }
 
         // --------------------------------------------------------------------------------------------
@@ -299,7 +299,7 @@ class m200429_063615_content_tables extends Migration
 
             // разделы
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
-                'priority' => 1000, 'section_id' => $sect1_id, 'menu_name' => 'Раздел в пути', 'path' => 'index',
+                'priority' => 1000, 'section_id' => $sect1_id, 'menu_name' => 'Раздел в домене', 'path' => 'index',
                 'content_keys_json' => json_encode(['MENU_TOP'], JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK),
             ]);
             $menu_s1_index_id = $this->db->getLastInsertID();
@@ -311,13 +311,13 @@ class m200429_063615_content_tables extends Migration
             $menu_s1_about_id = $this->db->getLastInsertID();
 
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
-                'priority' => 2000, 'section_id' => $sect2_id, 'menu_name' => 'Раздел в домене', 'path' => 'index',
+                'priority' => 2000, 'section_id' => $sect_path_id, 'menu_name' => 'Раздел в пути', 'path' => 'index',
                 'content_keys_json' => json_encode(['MENU_TOP'], JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK),
             ]);
             $menu_s2_index_id = $this->db->getLastInsertID();
 
             $this->insert($tn, ['site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
-                'priority' => 2010, 'section_id' => $sect2_id, 'menu_name' => 'Статьи', 'path' => 'articles',
+                'priority' => 2010, 'section_id' => $sect_path_id, 'menu_name' => 'Статьи', 'path' => 'articles',
                 'content_keys_json' => json_encode(['MENU_SIDE'], JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK),
             ]);
             $menu_s2_articles_id = $this->db->getLastInsertID();
