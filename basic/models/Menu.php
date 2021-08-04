@@ -355,6 +355,7 @@ class Menu extends BaseModel
                     'is_all_section' => $item['is_all_section'],
                     'is_current_section' => $item['is_current_section'],
                     'path' => $item['path'],
+                    'section_id' => $item['section_id'],
                     //'' => $item[''],
                     //'' => $item[''],
                     'url' => $_item['url'], // внешний урл. с исходного элемента! так как это первое проверяем и если оно не пусто то сразу лепим внешний линк
