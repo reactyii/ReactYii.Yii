@@ -92,8 +92,15 @@ $config = [
             'suffix' => '.html',
             'rules' => [
                 'site/<action>' => 'site/<action>',
+
                 // '<url:[a-zA-Z0-9-_&%\\/]+>' => 'main/index',
-                '<url:.*>' => 'react/index'
+                '<url:.*>' => 'react/index',
+                // обязательно добавим такое правило чтоб пути типа /path/ пропускать
+                [
+                    'pattern' => '<url:.*>',
+                    'route' => 'react/index',
+                    'suffix' => false,
+                ]
             ]
         ] /* */
     ],
