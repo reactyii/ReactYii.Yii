@@ -162,7 +162,7 @@ class ReactController extends Controller
 
                 $response->data = $page;
             } catch (\yii\web\NotFoundHttpException $e) { // 404 в аякс режиме - нужно вернуть вместо контента спец сформированный блок
-                // при возниконовении этой ошибки у нас не отресолвлен только $content и (или) $page, но в любом случае мы делаем поиск 404 страницы в БД
+                // при возникновении этой ошибки у нас не отресолвлен только $content и (или) $page, но в любом случае мы делаем поиск 404 страницы в БД
 
                 // $section (!) также может быть не отресолвлен, НО мы уже можем быть в ветке где нет такого раздела! и мы пытались отресолвить страницу с этим именем
                 // /ru/section_bad/page1.html у нас нет раздела section_bad и parsePath попробует найти страницу с этим именем и если не найдет, то выкинет исключение 404
@@ -314,7 +314,7 @@ class ReactController extends Controller
     {
         $request = Yii::$app->request;
         $_path = $request->pathInfo; // здесь нам нужен исходный путь, а не доработанный моими проверками
-        
+
         return str_replace(
             '"pageWraper":{"key":"\u002F' . $key . '"',
             '"pageWraper":{"key":"' . str_replace(['/', '"', "\n"], ['\\u002F', '', ''], '/' . $_path) . '"',

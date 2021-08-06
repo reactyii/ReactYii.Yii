@@ -228,7 +228,7 @@ class Menu extends BaseModel
             ];
             $page['section'] = $section;
             $page['lang'] = $lang;
-            $page['content'] = [
+            $content = [
                 [
                     'id' => '-' . $code,
                     'content' => $ccontent[0],
@@ -237,6 +237,7 @@ class Menu extends BaseModel
                     //'content_keys' => $_item['content_keys'], // с исходного элемента!
                 ]
             ];
+
         } else {
             $parts = [];
             $get = null;
@@ -254,8 +255,11 @@ class Menu extends BaseModel
                     ]
                 ];
             }
-            $page['content'] = $content;
+
         }
+        static::fillContentFromMenu($session, $lang, $content);
+
+        $page['content'] = $content;
 
         return $page;
     }
