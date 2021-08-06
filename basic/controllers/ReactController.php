@@ -42,11 +42,18 @@ class ReactController extends Controller
     {
         // перенаправление ошибок работает тока в проде в разработке мы попадаем в перехватчик ошибок модуля debug
         // сюда мы завалимся тока при 500 ошибке
-        //$e = Yii::$app->errorHandler->exception;
-        //Yii::error("\n\n\n\n------>>>> actionError: " . $e->getMessage(). "\n" . $e->getFile(). ' (' . $e->getLine() . ")\n" . $e->getTraceAsString(), __METHOD__);
-        //Yii::error("actionError: ----------------\n\n\n" . var_export($exception, true));
+        // как оказалось и 404 тоже вполне себе. на путь /path/ без указания index.html (как я понял нет суффикса)
+        $e = Yii::$app->errorHandler->exception;
 
-        $_data = $this->loadSSR('500.html');
+        $statusCode = '500';
+        if($e!= null) {
+            Yii::error("\n\n\n\n------>>>> actionError: " . $e->statusCode . ' ' . $e->getMessage() . "\n" . $e->getFile() . ' (' . $e->getLine() . ")\n" . $e->getTraceAsString(), __METHOD__);
+            //Yii::error("actionError: ----------------\n\n\n" . var_export($e, true));
+
+            $statusCode = $e->statusCode == 404 ? '404' : '500';
+        }
+
+        $_data = $this->loadSSR($statusCode.'.html');
         if ($_data['status'] === 200) // найдена отрендеренная 404
         {
             $request = Yii::$app->request;
@@ -57,7 +64,7 @@ class ReactController extends Controller
                 '"pageWraper":{"key":"' . str_replace(['/', '"', "\n"], ['\\u002F', '', ''], '/' . $path) . '"',
                 $_data['content']
             );/**/
-            $_data['content'] = $this->replaceWrapperKey('500.html', $path, $_data['content']);
+            $_data['content'] = $this->replaceWrapperKey($statusCode.'.html', $path, $_data['content']);
             Yii::error("content=" . $_data['content']);
             return $this->render('index', $_data);
         }
@@ -75,10 +82,27 @@ class ReactController extends Controller
     {
         $request = Yii::$app->request;
         $path = $request->pathInfo;
+
+        // частая ошибка показываем 404
+        //Yii::info('!!!! strpos("'.$path . '", "//")='. var_export(strpos($path, '//'), true));
+        // да бля если в браузере набрать http://reactyii.test// то $path будет равен '/'
+        if ($path === '/' || strpos($path, '//') !== false) throw new \yii\web\NotFoundHttpException();
+
+        // путь заканчивается на / значит надо добавить в него index.html
+        if ($path !== '') {
+            if (Site::endsWith($path, '/')) {
+                $path .= 'index.html';
+            }
+            if (!Site::endsWith($path, '.html')) {
+                // а вот тут надо сделать редирект на ту же страницу, но с .html
+                // тут мы не знаем папка это или path? будем предполагать что path
+                return $this->redirect($path . '.html', 301); // 301 Moved Permanently
+            }
+        }
         Yii::info("\n\n\n");
         Yii::info("--------------------start " . $request->method . ': ' . $path, __METHOD__);
 
-        if (! $this->checkCORS($request)) {
+        if (!$this->checkCORS($request)) {
             return; // ответ уже выслан или ничего не надо посылать
         }
 
@@ -89,6 +113,8 @@ class ReactController extends Controller
         $session['user'] = null; // грузим данные юзера
 
         $post = $request->isPost ? $request->post() : null;
+
+        //throw new ErrorException("Test 500 error");
 
         if ($request->isAjax) {
             list ($lang, $section, $page, $content) = [null, null, null, null];
@@ -146,7 +172,7 @@ class ReactController extends Controller
                 $page['session'] = $session; // в 404 сделаем возврат и сессии также (подумать) в теории можно также как и для обычной страницы, но пока некада
                 $response->data = $page;
             } catch (\Exception $e) {
-                Yii::error("=====> Exception: " . $e->getMessage(). "\n" . $e->getFile(). ' (' . $e->getLine() . ")\n" . $e->getTraceAsString(), __METHOD__);
+                Yii::error("=====> Exception: " . $e->getMessage() . "\n" . $e->getFile() . ' (' . $e->getLine() . ")\n" . $e->getTraceAsString(), __METHOD__);
                 // в проде тут может быть все плохо. самое херовое это когда и $session нема (БД ушла покурить)
                 // но мы должны попытаться вытащить все что можно (в надежде что БД тут и просто где то деление на ноль или ошибка в запросе)
                 $page = Menu::get500BySection($session, $lang, $section, $e);
@@ -169,18 +195,15 @@ class ReactController extends Controller
             try {
                 list ($lang, $section, $page, $content) = $this->parsePath($session, $path, $get, $post);
                 // если такой страницы на сайте нет то parsePath выкинет 404, а если мы прошли то значит вернем корректную страницу, но без SSR
-            }
-            catch(\yii\web\NotFoundHttpException $e) {
+            } catch (\yii\web\NotFoundHttpException $e) {
                 throw $e;
-            }
-            catch(Exception $e) {
-                Yii::error("=====> Exception: " . $e->getMessage(). "\n" . $e->getFile(). ' (' . $e->getLine() . ")\n" . $e->getTraceAsString(), __METHOD__);
+            } catch (Exception $e) {
+                Yii::error("=====> Exception: " . $e->getMessage() . "\n" . $e->getFile() . ' (' . $e->getLine() . ")\n" . $e->getTraceAsString(), __METHOD__);
                 throw $e;
             }
 
             $data = $this->getDefaultSSRContent($session);
-        }
-        else {
+        } else {
             // SSR
             $data = $this->setSSR($session, $path);
         }
@@ -228,7 +251,8 @@ class ReactController extends Controller
         }
     }
 
-    private function getDefaultSSRContent() {
+    private function getDefaultSSRContent()
+    {
         return [
             'status' => 200,
             'content' => '<noscript>You need to enable JavaScript to run this app.</noscript><div id="root"></div>',
@@ -281,16 +305,19 @@ class ReactController extends Controller
             'tags' => [
                 'site-' . $site['id'], // чтоб скинуть кеши всего сайта
                 'pages-' . $site['id'] // чтоб скинуть тока страницы сайта
-                                       // 'page-' . $path // чтоб обновить конкретную страницу (скорее всего это использовать не будем!)
+                // 'page-' . $path // чтоб обновить конкретную страницу (скорее всего это использовать не будем!)
             ]
         ]));
     }
 
     private function replaceWrapperKey($key, $path, $content)
     {
+        $request = Yii::$app->request;
+        $_path = $request->pathInfo; // здесь нам нужен исходный путь, а не доработанный моими проверками
+        
         return str_replace(
             '"pageWraper":{"key":"\u002F' . $key . '"',
-            '"pageWraper":{"key":"' . str_replace(['/', '"', "\n"], ['\\u002F', '', ''], '/' . $path) . '"',
+            '"pageWraper":{"key":"' . str_replace(['/', '"', "\n"], ['\\u002F', '', ''], '/' . $_path) . '"',
             $content
         );
     }
@@ -357,7 +384,7 @@ class ReactController extends Controller
     {
         $headers = $request->headers;
         $origin = $headers->get('Origin');
-        if (! $origin)
+        if (!$origin)
             return true; // нет заголовка для проверки. ничего делать не нужно
 
         // Yii::info('host: ' . $request->userHost . '; ip: ' . $request->userIP, __METHOD__);
@@ -368,7 +395,7 @@ class ReactController extends Controller
             'localhost'
         ]; // разрешенные хосты для аякс реквестов
 
-        if (! in_array($host, $allwedOrigins)) // запрос не с нашего сайта. выдадим ответ not allowed
+        if (!in_array($host, $allwedOrigins)) // запрос не с нашего сайта. выдадим ответ not allowed
         {
             throw new \yii\web\MethodNotAllowedHttpException();
             return false;
@@ -416,12 +443,16 @@ class ReactController extends Controller
         $content = null;
 
         // уберем .html с конца
-        $parts = explode('/', (strrpos($path, '.html') === strlen($path)-5 ? substr($path, 0, strlen($path)-5) : $path));
+        $parts = explode('/', (strrpos($path, '.html') === strlen($path) - 5 ? substr($path, 0, strlen($path) - 5) : $path));
 
         // чисто для оптимизации если путь пустой то $parts = [''] и мы делаем поиск по языкам и разделам
         // НО! надо протестировать такой адрес yii.test// и в этом случае по идее должна быть 404!
         // решение на пустые части в пути (кроме строго единственного) будем кидать 404
-        if (sizeof($parts) === 1 && $parts[0] === '') array_shift($parts);
+        // вынес эти проверки наружу
+        /*if (sizeof($parts) === 1 && $parts[0] === '') {
+            throw new \yii\web\NotFoundHttpException();
+            //array_shift($parts);
+        }*/
 
         //Yii::info('=====> $parts[' . $path . ']=' . var_export($parts, true), __METHOD__);
 
@@ -437,7 +468,7 @@ class ReactController extends Controller
             }
         }
         // язык по умолчанию не зависимо от того что еcть в path
-        if (! $lang && sizeof($site['langs']) > 0) { // языка в пути нет и языков больше чем 1, но мы выберем язык по умолчанию
+        if (!$lang && sizeof($site['langs']) > 0) { // языка в пути нет и языков больше чем 1, но мы выберем язык по умолчанию
             $lang = $site['langs'][0]; // язык по умолчанию мы ставим на первое место при выборе из БД
         }
 
@@ -469,8 +500,7 @@ class ReactController extends Controller
         //Yii::info('=====> $page_path=' . $page_path, __METHOD__);
         $page = Menu::getItemBySectionPage($session, $section, $page_path);
         Yii::info("=====> page=" . var_export($page, true), __METHOD__);
-        if (!$page)
-        {
+        if (!$page) {
             throw new \yii\web\NotFoundHttpException();
         }
 

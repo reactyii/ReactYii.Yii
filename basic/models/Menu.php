@@ -186,7 +186,12 @@ class Menu extends BaseModel
     {
         $message = $e->getMessage();
         if (YII_ENV_DEV) {
-            $message .= "\n" . $e->getFile() . ' (' . $e->getLine() . ")\n" . $e->getTraceAsString();
+            // сильно сбивает сообщение (в отладке) если генерим 500.html страницу для SSR (я помню что мы здесь в YII_ENV_DEV)
+            $request = Yii::$app->request;
+            //Yii::info("get500BySection for userAgent=" . $request->userAgent);
+            if ($request->userAgent != 'ReactSnap') {
+                $message .= "\n" . $e->getFile() . ' (' . $e->getLine() . ")\n" . $e->getTraceAsString();
+            }
         }
         $template_key = 'Error500,Error';
         $ctype = 'error';
