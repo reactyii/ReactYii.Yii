@@ -98,6 +98,8 @@ class ReactController extends Controller
                 // тут мы не знаем папка это или path? будем предполагать что path
                 return $this->redirect($path . '.html', 301); // 301 Moved Permanently
             }
+        } else {
+            $path = 'index.html';
         }
         Yii::info("\n\n\n");
         Yii::info("--------------------start " . $request->method . ': ' . $path, __METHOD__);
