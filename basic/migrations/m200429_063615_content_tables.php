@@ -178,14 +178,20 @@ class m200429_063615_content_tables extends Migration
         $admin_sect_id = $this->db->getLastInsertID();
 
         if ($needTestData) {
-            $this/*->db->createCommand()*/ ->insert($tn, [
+            // пока есть проблема с генерацией ssr для поддоменов
+            /*$this->insert($tn, [
                 'site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
                 'priority' => 20, 'name' => 'Раздел в поддомене', 'host' => 'subdomain.' . $host
-            ]);
+            ]);/**/
+            $this->insert($tn, [
+                'site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
+                'priority' => 20, 'name' => 'Раздел в пути №1', 'path' => 'section1'
+            ]);/**/
             $sect1_id = $this->db->getLastInsertID();
+
             $this/*->db->createCommand()*/ ->insert($tn, [
                 'site_id' => $site_id, 'created_at' => date('Y-m-d H:i:s'),
-                'priority' => 30, 'name' => 'Раздел в пути', 'path' => 'part-of-path'
+                'priority' => 30, 'name' => 'Раздел в пути №2', 'path' => 'part-of-path'
             ]);
             $sect_path_id = $this->db->getLastInsertID();
         }
